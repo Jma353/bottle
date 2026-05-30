@@ -36,6 +36,22 @@ console.log(posts.get('post-1'));
 `upsert` inserts or replaces one entity. `delete` removes an entity by id.
 Both apply optimistically.
 
+```ts
+posts.delete({ id: 'post-1' });
+```
+
+## Ingest
+
+`ingest` inserts or updates an entity from an external source without creating
+a mutation or emitting change events. Use it when hydrating the collection from
+a server response.
+
+```ts
+for (const post of serverPosts) {
+  posts.ingest({ entity: post });
+}
+```
+
 ## Reads and listeners
 
 Use `get`, `all`, `find`, and `filter` to read the current optimistic state.
@@ -61,7 +77,8 @@ stop();
 ## Mutations
 
 `upsert`, `update`, and `delete` all create an active mutation and auto-commit
-it by default. Pass `autoCommit: false` to queue the change instead.
+it by default. Pass `autoCommit: false` to queue the change instead. Each accepts
+an optional `onError` callback for handling sync failures.
 
 ```ts
 posts.upsert({
