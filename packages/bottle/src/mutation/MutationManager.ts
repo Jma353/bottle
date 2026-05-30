@@ -15,7 +15,14 @@ type PendingSnapshot<T extends Entity> = EntitySnapshots<T> & {
 };
 
 export class MutationManager<T extends Entity> {
+  /**
+   * Map of entity ids to their pending snapshots during active mutations.
+   */
   private pendingSnapshots = observable.map<string, PendingSnapshot<T>>();
+
+  /**
+   * Map of entity ids to their currently active mutations.
+   */
   private activeMutations = observable.map<string, Mutation<T>>();
 
   /**

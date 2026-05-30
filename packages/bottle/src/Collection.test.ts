@@ -96,6 +96,65 @@ describe('Collection', () => {
     });
   });
 
+  it('no-ops when upserting an identical existing entity', () => {
+    const collection = new Collection<TestEntity>();
+    const receivedChanges: ItemChange<TestEntity>[] = [];
+    collection.onChange(change => {
+      receivedChanges.push(change);
+    });
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+    });
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+    });
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+    expect(receivedChanges.length).toBe(1);
+    expect(collection.snapshot('one').isDraft).toBe(false);
+  });
+
+  it('no-ops when updating with identical values', () => {
+    const collection = new Collection<TestEntity>();
+    const receivedChanges: ItemChange<TestEntity>[] = [];
+    collection.onChange(change => {
+      receivedChanges.push(change);
+    });
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+    });
+    collection.update({
+      id: 'one',
+      patch: { name: 'Original' },
+    });
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+    expect(receivedChanges.length).toBe(1);
+    expect(collection.snapshot('one').isDraft).toBe(false);
+  });
+
   it('folds draft insert updates into one active mutation', async () => {
     const collection = new Collection<TestEntity>();
 

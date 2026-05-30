@@ -1,3 +1,4 @@
+import { isEqual } from 'lodash-es';
 import { observable, computed, action, makeObservable } from 'mobx';
 
 import { foldChange } from './mutation/foldChange';
@@ -10,9 +11,20 @@ import { deepFreeze } from './utils/deepFreeze';
 export type { EntitySnapshots };
 
 export class Collection<T extends Entity> {
-  private items = observable.map<string, T>({}, { deep: false });
-  private handlers = new Set<ChangeHandler<T>>();
-  private mutationManager = new MutationManager<T>();
+  /**
+   * Observable map storing all entities in the collection keyed by id.
+   */
+  protected items = observable.map<string, T>({}, { deep: false });
+
+  /**
+   * Set of change handlers subscribed to item changes in this collection.
+   */
+  protected handlers = new Set<ChangeHandler<T>>();
+
+  /**
+   * Manager tracking active mutations and snapshots for collection entities.
+   */
+  protected mutationManager = new MutationManager<T>();
 
   constructor() {
     makeObservable(this, {
@@ -88,6 +100,9 @@ export class Collection<T extends Entity> {
   }): void {
     const { entity, sync, onError, autoCommit = true } = args;
     const change = this.applyUpsert(entity);
+    if (!change) {
+      return;
+    }
     const mutation = this.createMutation({ change, sync, onError });
     if (autoCommit) {
       mutation.commit(sync).catch(() => {});
@@ -217,9 +232,12 @@ export class Collection<T extends Entity> {
     };
   }
 
-  private applyUpsert(entity: T): ItemChange<T> {
+  private applyUpsert(entity: T): ItemChange<T> | undefined {
     const existing = this.items.get(entity.id);
     const frozen = deepFreeze(entity);
+    if (existing && isEqual(existing, frozen)) {
+      return undefined;
+    }
     const change: ItemChange<T> = {
       type: existing ? 'update' : 'insert',
       id: entity.id,
