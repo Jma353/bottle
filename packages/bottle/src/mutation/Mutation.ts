@@ -16,9 +16,25 @@ export class Mutation<T extends Entity> {
   private rolledBack = false;
 
   public change: ItemChange<T>;
+
+  /**
+   * Reverts the mutation's change from the collection when called.
+   */
   private readonly rollbackChange: () => void;
+
+  /**
+   * Called when the mutation reaches a terminal status (committed or rolled back).
+   */
   private readonly onSettled: () => void;
+
+  /**
+   * Called whenever the mutation's status or data changes.
+   */
   private readonly onChanged: () => void;
+
+  /**
+   * Default executor used to commit the mutation when no override is provided.
+   */
   private readonly defaultExecute?: ExecuteFunction<T>;
 
   constructor(args: {
