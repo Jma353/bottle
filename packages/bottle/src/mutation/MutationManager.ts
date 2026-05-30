@@ -1,3 +1,5 @@
+import { observable } from 'mobx';
+
 import type { DeepReadonly, Entity } from '../types';
 
 import type { Mutation } from './Mutation';
@@ -5,6 +7,7 @@ import type { Mutation } from './Mutation';
 export type EntitySnapshots<T extends Entity> = {
   original: DeepReadonly<T> | undefined;
   current: DeepReadonly<T> | undefined;
+  isDraft: boolean;
 };
 
 type PendingSnapshot<T extends Entity> = EntitySnapshots<T> & {
@@ -12,8 +15,8 @@ type PendingSnapshot<T extends Entity> = EntitySnapshots<T> & {
 };
 
 export class MutationManager<T extends Entity> {
-  private pendingSnapshots = new Map<string, PendingSnapshot<T>>();
-  private activeMutations = new Map<string, Mutation<T>>();
+  private pendingSnapshots = observable.map<string, PendingSnapshot<T>>();
+  private activeMutations = observable.map<string, Mutation<T>>();
 
   /**
    * Returns the active mutation for the given entity id.
@@ -84,6 +87,7 @@ export class MutationManager<T extends Entity> {
       mutationId: mutation.id,
       original: change.oldEntity,
       current: change.type === 'delete' ? undefined : change.entity,
+      isDraft: mutation.status === 'draft',
     });
 
     for (const [id, pending] of this.pendingSnapshots) {

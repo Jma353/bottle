@@ -116,13 +116,14 @@ describe('Collection', () => {
       autoCommit: false,
     });
 
-    const snap = collection.snapshot('one');
+    let snap = collection.snapshot('one');
     expect(snap.original).toBeUndefined();
     expect(snap.current).toEqual({
       id: 'one',
       name: 'Updated',
       meta: { count: 2 },
     });
+    expect(snap.isDraft).toBe(true);
 
     await collection.commit({ id: 'one' });
 
@@ -138,6 +139,7 @@ describe('Collection', () => {
         name: 'Updated',
         meta: { count: 2 },
       },
+      isDraft: false,
     });
   });
 
@@ -181,6 +183,7 @@ describe('Collection', () => {
       meta: { count: 1 },
     });
     expect(snap.current).toBeUndefined();
+    expect(snap.isDraft).toBe(true);
 
     collection.rollback({ id: 'one' });
 
@@ -241,6 +244,7 @@ describe('Collection', () => {
       name: 'Later',
       meta: { count: 3 },
     });
+    expect(snap.isDraft).toBe(true);
 
     collection.rollback({ id: 'one' });
 
@@ -452,6 +456,7 @@ describe('Collection', () => {
       name: 'Stored',
       meta: { count: 1 },
     });
+    expect(snap.isDraft).toBe(true);
 
     collection.rollback({ id: 'one' });
 
@@ -587,6 +592,7 @@ describe('Collection', () => {
       name: 'Pending',
       meta: { count: 2 },
     });
+    expect(snap.isDraft).toBe(true);
 
     collection.ingest({
       entity: {
@@ -603,6 +609,7 @@ describe('Collection', () => {
       name: 'External',
       meta: { count: 3 },
     });
+    expect(snap.isDraft).toBe(false);
   });
 
   it('discards a pending insert mutation when the entity is ingested', async () => {
@@ -627,6 +634,7 @@ describe('Collection', () => {
       name: 'Pending',
       meta: { count: 1 },
     });
+    expect(snap.isDraft).toBe(false);
 
     collection.ingest({
       entity: {
@@ -643,6 +651,7 @@ describe('Collection', () => {
       name: 'External',
       meta: { count: 2 },
     });
+    expect(snap.isDraft).toBe(false);
   });
 
   it('auto-commits mutations when autoCommit is true', async () => {
@@ -664,6 +673,7 @@ describe('Collection', () => {
     expect(collection.snapshot('one')).toEqual({
       original: undefined,
       current: entity,
+      isDraft: false,
     });
   });
 

@@ -147,6 +147,14 @@ function AppInner() {
     store.deletePost({ id });
   };
 
+  const handleCommitPost = (id: string) => {
+    store.commitPost({ id }).catch(() => {});
+  };
+
+  const handleRollbackPost = (id: string) => {
+    store.rollbackPost({ id });
+  };
+
   return (
     <Container>
       <Row>
@@ -195,6 +203,8 @@ function AppInner() {
           onCancelPostEdit={handleCancelPostEdit}
           onDeletePost={handleDeletePost}
           onDeleteUser={handleDeleteUser}
+          onCommitPost={handleCommitPost}
+          onRollbackPost={handleRollbackPost}
         />
       </Panel>
       <Row>

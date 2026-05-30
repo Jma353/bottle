@@ -114,7 +114,7 @@ class Store {
           throw new Error('Failed to create post');
         }
       },
-      autoCommit: true,
+      autoCommit: false,
     });
   }
 
@@ -133,7 +133,7 @@ class Store {
           throw new Error('Failed to update post');
         }
       },
-      autoCommit: true,
+      autoCommit: false,
     });
   }
 
@@ -151,6 +151,16 @@ class Store {
       },
       autoCommit: true,
     });
+  }
+
+  commitPost(args: { id: string }) {
+    const { id } = args;
+    return this.posts.commit({ id });
+  }
+
+  rollbackPost(args: { id: string }) {
+    const { id } = args;
+    this.posts.rollback({ id });
   }
 }
 

@@ -88,7 +88,7 @@ export class Collection<T extends Entity> {
   }): void {
     const { entity, sync, onError, autoCommit = true } = args;
     const change = this.applyUpsert(entity);
-    const mutation = this.createMutation({ change, onError });
+    const mutation = this.createMutation({ change, sync, onError });
     if (autoCommit) {
       mutation.commit(sync).catch(() => {});
     }
@@ -124,24 +124,28 @@ export class Collection<T extends Entity> {
     if (!change) {
       return;
     }
-    const mutation = this.createMutation({ change, onError });
+    const mutation = this.createMutation({ change, sync, onError });
     if (autoCommit) {
       mutation.commit(sync).catch(() => {});
     }
   }
 
   /**
-   * Returns the original and current snapshots for the given entity id.
+   * Returns the original and current snapshots for the given entity id,
+   * along with whether there's an active draft mutation.
    */
   snapshot(id: string): EntitySnapshots<T> {
     const original = this.mutationManager.getOriginalSnapshot(id);
     const current = this.mutationManager.getCurrentSnapshot(id);
+    const isDraft =
+      this.mutationManager.getActiveMutation(id)?.status === 'draft';
     if (original !== undefined || current !== undefined) {
-      return { original, current };
+      return { original, current, isDraft };
     }
     return {
       original: undefined,
       current: this.get(id),
+      isDraft,
     };
   }
 
@@ -249,9 +253,10 @@ export class Collection<T extends Entity> {
 
   private createMutation(args: {
     change: ItemChange<T>;
+    sync?: (change: ItemChange<T>) => Promise<void>;
     onError?: (error: Error) => void;
   }): Mutation<T> {
-    const { change, onError } = args;
+    const { change, sync, onError } = args;
     const activeMutation = this.mutationManager.getActiveMutation(change.id);
     if (activeMutation && activeMutation.status === 'draft') {
       return this.foldMutation({
@@ -278,6 +283,7 @@ export class Collection<T extends Entity> {
         });
       },
       onError,
+      defaultExecute: sync,
     });
     this.mutationManager.setActiveMutation(mutation);
 
