@@ -18,7 +18,7 @@ mutating returned objects.
 import { Collection } from 'bottle';
 
 type Post = { id: string; title: string; published: boolean };
-const posts = new Collection<Post>('posts');
+const posts = new Collection<Post>();
 
 const mutation = posts.upsert({
   entity: { id: 'post-1', title: 'Hello', published: false },

@@ -13,7 +13,7 @@ export class Collection<T extends Entity> {
   private handlers = new Set<ChangeHandler<T>>();
   private mutationManager = new MutationManager<T>();
 
-  constructor(public readonly name: string) {
+  constructor() {
     makeObservable(this, {
       all: computed,
       get: action.bound,

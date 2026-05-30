@@ -12,7 +12,7 @@ const noopSync = async (_change: ItemChange<TestEntity>) => {};
 
 describe('Mutation', () => {
   it('records executor errors and returns to draft', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const mutation = collection.upsert({
       entity: { id: 'one', name: 'Original' },
       sync: noopSync,
@@ -38,7 +38,7 @@ describe('Mutation', () => {
   });
 
   it('rolls back collection changes before commit and rejects later commits', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const mutation = collection.upsert({
       entity: { id: 'one', name: 'Original' },
       sync: noopSync,
@@ -61,7 +61,7 @@ describe('Mutation', () => {
   });
 
   it('rejects rollback after commit', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const mutation = collection.upsert({
       entity: { id: 'one', name: 'Original' },
       sync: noopSync,
@@ -77,7 +77,7 @@ describe('Mutation', () => {
   });
 
   it('can be marked pending and committed without a transport executor', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const mutation = collection.upsert({
       entity: { id: 'one', name: 'Original' },
       sync: noopSync,
@@ -97,7 +97,7 @@ describe('Mutation', () => {
   });
 
   it('applies partial updates via update and rolls back', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     await collection
       .upsert({
         entity: { id: 'one', name: 'Original' },
@@ -120,7 +120,7 @@ describe('Mutation', () => {
   });
 
   it('records executor errors on update mutations and returns to draft', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     await collection
       .upsert({
         entity: { id: 'one', name: 'Original' },

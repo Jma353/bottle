@@ -15,7 +15,7 @@ const noopSync = async (_change: ItemChange<TestEntity>) => {};
 
 describe('Collection', () => {
   it('inserts entities and exposes readonly frozen snapshots', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const receivedChanges: ItemChange<TestEntity>[] = [];
     collection.onChange(change => {
       receivedChanges.push(change);
@@ -56,7 +56,7 @@ describe('Collection', () => {
   });
 
   it('updates existing entities and reports the previous snapshot', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const receivedChanges: ItemChange<TestEntity>[] = [];
     collection.onChange(change => {
       receivedChanges.push(change);
@@ -103,7 +103,7 @@ describe('Collection', () => {
   });
 
   it('folds draft insert updates into one active mutation', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
 
     const insertMutation = collection.upsert({
       entity: {
@@ -147,7 +147,7 @@ describe('Collection', () => {
   });
 
   it('folds draft updates and deletes into one active mutation per entity', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     await collection
       .upsert({
         entity: {
@@ -211,7 +211,7 @@ describe('Collection', () => {
   });
 
   it('preserves pending mutations when an entity receives later updates', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     await collection
       .upsert({
         entity: {
@@ -302,7 +302,7 @@ describe('Collection', () => {
   });
 
   it('deletes existing entities and notifies listeners with the removed snapshot', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const receivedChanges: ItemChange<TestEntity>[] = [];
     collection.onChange(change => {
       receivedChanges.push(change);
@@ -342,7 +342,7 @@ describe('Collection', () => {
   });
 
   it('returns mutation objects for deleted entities', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     await collection
       .upsert({
         entity: {
@@ -386,7 +386,7 @@ describe('Collection', () => {
   });
 
   it('rolls back returned collection mutations before commit', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
 
     const insertMutation = collection.upsert({
       entity: {
@@ -457,7 +457,7 @@ describe('Collection', () => {
   });
 
   it('does not notify unsubscribed change handlers', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const receivedChanges: ItemChange<TestEntity>[] = [];
     const unsubscribe = collection.onChange(change => {
       receivedChanges.push(change);
@@ -478,7 +478,7 @@ describe('Collection', () => {
   });
 
   it('returns frozen readonly snapshots from collection read APIs', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     collection.upsert({
       entity: {
         id: 'one',
@@ -519,7 +519,7 @@ describe('Collection', () => {
   });
 
   it('diffs folded optimistic changes against ground truth', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
 
     collection.upsert({
       entity: {
@@ -583,7 +583,7 @@ describe('Collection', () => {
   });
 
   it('tracks mutation status transitions', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
 
     const insertMutation = collection.upsert({
       entity: {
@@ -633,7 +633,7 @@ describe('Collection', () => {
   });
 
   it('ingests externally pushed entities without creating a mutation', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const receivedChanges: ItemChange<TestEntity>[] = [];
     collection.onChange(change => {
       receivedChanges.push(change);
@@ -672,7 +672,7 @@ describe('Collection', () => {
   });
 
   it('ingests externally pushed updates to existing entities', () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const receivedChanges: ItemChange<TestEntity>[] = [];
     collection.onChange(change => {
       receivedChanges.push(change);
@@ -715,7 +715,7 @@ describe('Collection', () => {
   });
 
   it('auto-commits mutations when autoCommit is true', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const entity = {
       id: 'one',
       name: 'Original',
@@ -736,7 +736,7 @@ describe('Collection', () => {
   });
 
   it('stores auto-commit errors on the mutation', async () => {
-    const collection = new Collection<TestEntity>('tests');
+    const collection = new Collection<TestEntity>();
     const mutation = collection.upsert({
       entity: {
         id: 'one',
