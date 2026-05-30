@@ -1,22 +1,21 @@
 import { describe, expect, it } from '@rstest/core';
 
-import { Collection } from '../Collection';
-import type { ItemChange } from '../types';
+import { Mutation } from './Mutation';
 
 type TestEntity = {
   id: string;
   name: string;
 };
 
-const noopSync = async (_change: ItemChange<TestEntity>) => {};
-
 describe('Mutation', () => {
   it('records executor errors and returns to draft', async () => {
-    const collection = new Collection<TestEntity>();
-    const mutation = collection.upsert({
-      entity: { id: 'one', name: 'Original' },
-      sync: noopSync,
-      autoCommit: false,
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original' },
+      },
+      rollbackChange: () => {},
     });
 
     let thrown: Error | undefined;
@@ -37,18 +36,24 @@ describe('Mutation', () => {
     expect(mutation.status).toBe('committed');
   });
 
-  it('rolls back collection changes before commit and rejects later commits', async () => {
-    const collection = new Collection<TestEntity>();
-    const mutation = collection.upsert({
-      entity: { id: 'one', name: 'Original' },
-      sync: noopSync,
-      autoCommit: false,
+  it('rolls back changes before commit and rejects later commits', async () => {
+    let rollbackCalls = 0;
+    const rollback = () => {
+      rollbackCalls += 1;
+    };
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original' },
+      },
+      rollbackChange: rollback,
     });
 
     mutation.rollback();
     mutation.rollback();
 
-    expect(collection.get('one')).toBeUndefined();
+    expect(rollbackCalls).toBe(1);
 
     let thrown: Error | undefined;
     try {
@@ -61,11 +66,13 @@ describe('Mutation', () => {
   });
 
   it('rejects rollback after commit', async () => {
-    const collection = new Collection<TestEntity>();
-    const mutation = collection.upsert({
-      entity: { id: 'one', name: 'Original' },
-      sync: noopSync,
-      autoCommit: false,
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original' },
+      },
+      rollbackChange: () => {},
     });
 
     await mutation.commit();
@@ -73,83 +80,88 @@ describe('Mutation', () => {
     expect(() => {
       mutation.rollback();
     }).toThrow('Cannot rollback a committed mutation');
-    expect(collection.get('one')).toEqual({ id: 'one', name: 'Original' });
   });
 
   it('can be marked pending and committed without a transport executor', () => {
-    const collection = new Collection<TestEntity>();
-    const mutation = collection.upsert({
-      entity: { id: 'one', name: 'Original' },
-      sync: noopSync,
-      autoCommit: false,
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original' },
+      },
+      rollbackChange: () => {},
     });
 
     mutation.markPending();
 
     expect(mutation.status).toBe('pending');
-    expect(collection.get('one')).toEqual({ id: 'one', name: 'Original' });
 
     mutation.markCommitted({ result: 'synced' });
 
     expect(mutation.status).toBe('committed');
     expect(mutation.result).toBe('synced');
-    expect(collection.get('one')).toEqual({ id: 'one', name: 'Original' });
   });
 
-  it('applies partial updates via update and rolls back', async () => {
-    const collection = new Collection<TestEntity>();
-    await collection
-      .upsert({
+  it('transitions status through commit', async () => {
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
         entity: { id: 'one', name: 'Original' },
-        sync: noopSync,
-        autoCommit: false,
-      })
-      .commit();
-    const mutation = collection.update({
-      id: 'one',
-      patch: { name: 'Updated' },
-      sync: noopSync,
-      autoCommit: false,
+      },
+      rollbackChange: () => {},
     });
 
-    expect(collection.get('one')).toEqual({ id: 'one', name: 'Updated' });
-
-    mutation.rollback();
-
-    expect(collection.get('one')).toEqual({ id: 'one', name: 'Original' });
-  });
-
-  it('records executor errors on update mutations and returns to draft', async () => {
-    const collection = new Collection<TestEntity>();
-    await collection
-      .upsert({
-        entity: { id: 'one', name: 'Original' },
-        sync: noopSync,
-        autoCommit: false,
-      })
-      .commit();
-    const mutation = collection.update({
-      id: 'one',
-      patch: { name: 'Updated' },
-      sync: noopSync,
-      autoCommit: false,
-    });
-
-    let thrown: Error | undefined;
-    try {
-      await mutation.commit(async () => {
-        throw new Error('save failed');
-      });
-    } catch (err) {
-      thrown = err instanceof Error ? err : new Error(String(err));
-    }
-
-    expect(thrown?.message).toBe('save failed');
     expect(mutation.status).toBe('draft');
-    expect(mutation.error?.message).toBe('save failed');
 
-    await mutation.commit();
+    mutation.markPending();
+    expect(mutation.status).toBe('pending');
 
+    mutation.markCommitted();
     expect(mutation.status).toBe('committed');
+  });
+
+  it('updates change while in draft status', () => {
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original' },
+      },
+      rollbackChange: () => {},
+    });
+
+    mutation.updateChange({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Updated' },
+      },
+    });
+
+    expect(mutation.change.entity).toEqual({ id: 'one', name: 'Updated' });
+  });
+
+  it('rejects change updates when not in draft', () => {
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original' },
+      },
+      rollbackChange: () => {},
+    });
+
+    mutation.markPending();
+
+    expect(() => {
+      mutation.updateChange({
+        change: {
+          type: 'insert',
+          id: 'one',
+          entity: { id: 'one', name: 'Updated' },
+        },
+      });
+    }).toThrow("Cannot update mutation in status 'pending'");
   });
 });

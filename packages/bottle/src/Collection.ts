@@ -1,5 +1,6 @@
 import { observable, computed, action, makeObservable } from 'mobx';
 
+import { foldChange } from './mutation/foldChange';
 import { Mutation } from './mutation/Mutation';
 import { MutationManager } from './mutation/MutationManager';
 import type { EntitySnapshots } from './mutation/MutationManager';
@@ -21,6 +22,9 @@ export class Collection<T extends Entity> {
       delete: action.bound,
       update: action.bound,
       ingest: action.bound,
+      snapshot: action.bound,
+      commit: action.bound,
+      rollback: action.bound,
     });
   }
 
@@ -74,55 +78,94 @@ export class Collection<T extends Entity> {
   }
 
   /**
-   * Inserts or updates an entity and returns a mutation tracking the change.
+   * Inserts or updates an entity.
    */
   upsert(args: {
     entity: T;
-    sync: (change: ItemChange<T>) => Promise<void>;
+    sync?: (change: ItemChange<T>) => Promise<void>;
     autoCommit?: boolean;
-  }): Mutation<T> {
+  }): void {
     const { entity, sync, autoCommit = true } = args;
     const change = this.applyUpsert(entity);
     const mutation = this.createMutation(change);
     if (autoCommit) {
       mutation.commit(sync).catch(() => {});
     }
-    return mutation;
   }
 
   /**
-   * Applies a partial patch to an existing entity and returns a mutation tracking the change.
+   * Applies a partial patch to an existing entity.
    */
   update(args: {
     id: string;
     patch: Partial<Omit<T, 'id'>>;
-    sync: (change: ItemChange<T>) => Promise<void>;
+    sync?: (change: ItemChange<T>) => Promise<void>;
     autoCommit?: boolean;
-  }): Mutation<T> {
+  }): void {
     const { id, patch, sync, autoCommit = true } = args;
     const existing = this.get(id);
     const updated = { ...(existing as T), ...patch, id } as T;
-    return this.upsert({ entity: updated, sync, autoCommit });
+    this.upsert({ entity: updated, sync, autoCommit });
   }
 
   /**
-   * Deletes the entity with the given id and returns a mutation, or undefined if not found.
+   * Deletes the entity with the given id.
    */
   delete(args: {
     id: string;
-    sync: (change: ItemChange<T>) => Promise<void>;
+    sync?: (change: ItemChange<T>) => Promise<void>;
     autoCommit?: boolean;
-  }): Mutation<T> | undefined {
+  }): void {
     const { id, sync, autoCommit = true } = args;
     const change = this.applyDelete(id);
     if (!change) {
-      return undefined;
+      return;
     }
     const mutation = this.createMutation(change);
     if (autoCommit) {
       mutation.commit(sync).catch(() => {});
     }
-    return mutation;
+  }
+
+  /**
+   * Returns the original and current snapshots for the given entity id.
+   */
+  snapshot(id: string): EntitySnapshots<T> {
+    const snapshots = this.mutationManager.getSnapshots(id);
+    if (snapshots.original !== undefined || snapshots.current !== undefined) {
+      return snapshots;
+    }
+    return {
+      original: undefined,
+      current: this.get(id),
+    };
+  }
+
+  /**
+   * Commits the active mutation for the given entity id.
+   */
+  commit(args: {
+    id: string;
+    sync?: (change: ItemChange<T>) => Promise<void>;
+  }): Promise<void> {
+    const { id, sync } = args;
+    const mutation = this.mutationManager.getActiveMutation(id);
+    if (!mutation) {
+      throw new Error(`No active mutation for entity '${id}'`);
+    }
+    return mutation.commit(sync);
+  }
+
+  /**
+   * Rolls back the active mutation for the given entity id.
+   */
+  rollback(args: { id: string }): void {
+    const { id } = args;
+    const mutation = this.mutationManager.getActiveMutation(id);
+    if (!mutation) {
+      throw new Error(`No active mutation for entity '${id}'`);
+    }
+    mutation.rollback();
   }
 
   /**
@@ -130,8 +173,18 @@ export class Collection<T extends Entity> {
    */
   ingest(args: { entity: T }): DeepReadonly<T> {
     const { entity } = args;
+    const existing = this.items.get(entity.id);
     const frozen = deepFreeze(entity);
+    const change: ItemChange<T> = {
+      type: existing ? 'update' : 'insert',
+      id: entity.id,
+      entity: frozen as DeepReadonly<T>,
+    };
+    if (existing) {
+      change.oldEntity = existing as DeepReadonly<T>;
+    }
     this.items.set(entity.id, frozen);
+    this.emit(change);
     return frozen as DeepReadonly<T>;
   }
 
@@ -217,7 +270,7 @@ export class Collection<T extends Entity> {
   }): Mutation<T> {
     const { mutation, change } = args;
     const previousChange = mutation.change;
-    const foldedChange = MutationManager.foldChange({
+    const foldedChange = foldChange({
       previousChange,
       change,
     });

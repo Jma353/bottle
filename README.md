@@ -20,14 +20,13 @@ import { Collection } from 'bottle';
 type Post = { id: string; title: string; published: boolean };
 const posts = new Collection<Post>();
 
-const mutation = posts.upsert({
+posts.upsert({
   entity: { id: 'post-1', title: 'Hello', published: false },
   sync: async change => {
     await fetch('/api/posts', {
       method: 'POST',
       body: JSON.stringify(change.entity),
     });
-    return change.entity;
   },
 });
 
@@ -35,24 +34,7 @@ console.log(posts.get('post-1'));
 ```
 
 `upsert` inserts or replaces one entity. `delete` removes an entity by id.
-Both apply optimistically and return a `Mutation`.
-
-```ts
-const insert = posts.upsert({
-  entity: { id: 'post-2', title: 'Draft', published: false },
-  sync: async change => change.entity,
-  autoCommit: false,
-});
-
-const remove = posts.delete({
-  id: 'post-2',
-  sync: async change => change.entity,
-  autoCommit: false,
-});
-
-insert.rollback();
-remove?.rollback();
-```
+Both apply optimistically.
 
 ## Reads and listeners
 
@@ -76,31 +58,48 @@ const stop = posts.onChange(change => {
 stop();
 ```
 
-## Mutation lifecycle
+## Mutations
 
-Collection changes create `Mutation` objects with `draft`, `pending`, and
-`committed` states. `commit` marks the mutation pending, runs the sync
-function, and marks it committed on success. Failed commits return to `draft`
-and store the error on the mutation.
+`upsert`, `update`, and `delete` all create an active mutation and auto-commit
+it by default. Pass `autoCommit: false` to queue the change instead.
 
 ```ts
-const mutation = posts.upsert({
-  entity: { id: 'post-3', title: 'Queued', published: false },
-  sync: async change => change.entity,
+posts.upsert({
+  entity: { id: 'post-2', title: 'Draft', published: false },
   autoCommit: false,
 });
 
-mutation.markPending();
-mutation.markCommitted({ result: { syncedAt: Date.now() } });
+await posts.commit({
+  id: 'post-2',
+  sync: async change => {
+    await fetch('/api/posts', {
+      method: 'POST',
+      body: JSON.stringify(change.entity),
+    });
+  },
+});
+```
+
+Use `snapshot` to inspect the original and current state of an entity while a
+mutation is pending:
+
+```ts
+const { original, current } = posts.snapshot('post-2');
+```
+
+Roll back a draft or pending mutation for an entity:
+
+```ts
+posts.rollback({ id: 'post-2' });
 ```
 
 Draft changes for the same entity fold into one active mutation. Later changes
 made while a previous mutation is already pending create a separate mutation.
 
-`Collection#update` creates a `Mutation` for partial optimistic updates:
+`Collection#update` applies partial optimistic updates:
 
 ```ts
-const update = posts.update({
+posts.update({
   id: 'post-1',
   patch: { published: true },
   sync: async change => {
@@ -108,7 +107,6 @@ const update = posts.update({
       method: 'PATCH',
       body: JSON.stringify(change.entity),
     });
-    return change.entity;
   },
 });
 ```

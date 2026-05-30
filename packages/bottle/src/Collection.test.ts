@@ -27,8 +27,6 @@ describe('Collection', () => {
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
-      autoCommit: false,
     });
 
     const entity = collection.get('one');
@@ -68,8 +66,6 @@ describe('Collection', () => {
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
-      autoCommit: false,
     });
     collection.upsert({
       entity: {
@@ -77,8 +73,6 @@ describe('Collection', () => {
         name: 'Updated',
         meta: { count: 2 },
       },
-      sync: noopSync,
-      autoCommit: false,
     });
 
     expect(collection.get('one')).toEqual({
@@ -105,103 +99,90 @@ describe('Collection', () => {
   it('folds draft insert updates into one active mutation', async () => {
     const collection = new Collection<TestEntity>();
 
-    const insertMutation = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    const updateMutation = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Updated',
         meta: { count: 2 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
 
-    expect(updateMutation).toBe(insertMutation);
-    expect(insertMutation.change).toEqual({
-      type: 'insert',
+    const snap = collection.snapshot('one');
+    expect(snap.original).toBeUndefined();
+    expect(snap.current).toEqual({
       id: 'one',
-      entity: {
-        id: 'one',
-        name: 'Updated',
-        meta: { count: 2 },
-      },
+      name: 'Updated',
+      meta: { count: 2 },
     });
-    expect(insertMutation.status).toBe('draft');
 
-    await updateMutation.commit();
+    await collection.commit({ id: 'one' });
 
-    expect(updateMutation.status).toBe('committed');
     expect(collection.get('one')).toEqual({
       id: 'one',
       name: 'Updated',
       meta: { count: 2 },
     });
+    expect(collection.snapshot('one')).toEqual({
+      original: undefined,
+      current: {
+        id: 'one',
+        name: 'Updated',
+        meta: { count: 2 },
+      },
+    });
   });
 
   it('folds draft updates and deletes into one active mutation per entity', async () => {
     const collection = new Collection<TestEntity>();
-    await collection
-      .upsert({
-        entity: {
-          id: 'one',
-          name: 'Original',
-          meta: { count: 1 },
-        },
-        sync: noopSync,
-        autoCommit: false,
-      })
-      .commit();
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'one', sync: noopSync });
 
-    const firstUpdate = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Updated',
         meta: { count: 2 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    const secondUpdate = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Latest',
         meta: { count: 3 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    const deleteMutation = collection.delete({
+    collection.delete({
       id: 'one',
-      sync: noopSync,
       autoCommit: false,
     });
 
-    expect(secondUpdate).toBe(firstUpdate);
-    expect(deleteMutation).toBe(firstUpdate);
-    expect(firstUpdate.change).toEqual({
-      type: 'delete',
+    const snap = collection.snapshot('one');
+    expect(snap.original).toEqual({
       id: 'one',
-      entity: {
-        id: 'one',
-        name: 'Latest',
-        meta: { count: 3 },
-      },
-      oldEntity: {
-        id: 'one',
-        name: 'Original',
-        meta: { count: 1 },
-      },
+      name: 'Original',
+      meta: { count: 1 },
     });
+    expect(snap.current).toBeUndefined();
 
-    firstUpdate.rollback();
+    collection.rollback({ id: 'one' });
 
     expect(collection.get('one')).toEqual({
       id: 'one',
@@ -212,92 +193,70 @@ describe('Collection', () => {
 
   it('preserves pending mutations when an entity receives later updates', async () => {
     const collection = new Collection<TestEntity>();
-    await collection
-      .upsert({
-        entity: {
-          id: 'one',
-          name: 'Original',
-          meta: { count: 1 },
-        },
-        sync: noopSync,
-        autoCommit: false,
-      })
-      .commit();
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'one', sync: noopSync });
 
     let resolvePending: () => void = () => {};
     const pendingCommit = new Promise<void>(resolve => {
       resolvePending = resolve;
     });
 
-    const pendingMutation = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Pending',
         meta: { count: 2 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    const pendingResult = pendingMutation.commit(async () => pendingCommit);
+    const pendingResult = collection.commit({
+      id: 'one',
+      sync: async () => pendingCommit,
+    });
 
-    const laterMutation = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Later',
         meta: { count: 3 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
 
-    expect(laterMutation).not.toBe(pendingMutation);
-    expect(pendingMutation.status).toBe('pending');
-    expect(pendingMutation.change).toEqual({
-      type: 'update',
+    const snap = collection.snapshot('one');
+    expect(snap.original).toEqual({
       id: 'one',
-      entity: {
-        id: 'one',
-        name: 'Pending',
-        meta: { count: 2 },
-      },
-      oldEntity: {
-        id: 'one',
-        name: 'Original',
-        meta: { count: 1 },
-      },
+      name: 'Pending',
+      meta: { count: 2 },
     });
-    expect(laterMutation.change).toEqual({
-      type: 'update',
-      id: 'one',
-      entity: {
-        id: 'one',
-        name: 'Later',
-        meta: { count: 3 },
-      },
-      oldEntity: {
-        id: 'one',
-        name: 'Pending',
-        meta: { count: 2 },
-      },
-    });
-
-    pendingMutation.rollback();
-
-    expect(collection.get('one')).toEqual({
+    expect(snap.current).toEqual({
       id: 'one',
       name: 'Later',
       meta: { count: 3 },
+    });
+
+    collection.rollback({ id: 'one' });
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Pending',
+      meta: { count: 2 },
     });
 
     resolvePending();
     await pendingResult;
 
-    expect(pendingMutation.status).toBe('committed');
-    expect(laterMutation.status).toBe('draft');
     expect(collection.get('one')).toEqual({
       id: 'one',
-      name: 'Later',
-      meta: { count: 3 },
+      name: 'Pending',
+      meta: { count: 2 },
     });
   });
 
@@ -314,12 +273,9 @@ describe('Collection', () => {
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
-      autoCommit: false,
     });
     collection.delete({
       id: 'one',
-      sync: noopSync,
       autoCommit: false,
     });
 
@@ -341,76 +297,42 @@ describe('Collection', () => {
     });
   });
 
-  it('returns mutation objects for deleted entities', async () => {
+  it('no-ops when deleting a missing entity', () => {
     const collection = new Collection<TestEntity>();
-    await collection
-      .upsert({
-        entity: {
-          id: 'one',
-          name: 'Original',
-          meta: { count: 1 },
-        },
-        sync: noopSync,
-        autoCommit: false,
-      })
-      .commit();
 
-    const mutation = collection.delete({
-      id: 'one',
-      sync: noopSync,
+    collection.delete({
+      id: 'missing',
       autoCommit: false,
     });
 
-    expect(mutation?.change).toEqual({
-      type: 'delete',
-      id: 'one',
-      entity: {
-        id: 'one',
-        name: 'Original',
-        meta: { count: 1 },
-      },
-      oldEntity: {
-        id: 'one',
-        name: 'Original',
-        meta: { count: 1 },
-      },
-    });
-    expect(mutation?.status).toBe('draft');
-    expect(
-      collection.delete({
-        id: 'missing',
-        sync: noopSync,
-        autoCommit: false,
-      }),
-    ).toBeUndefined();
+    expect(collection.get('missing')).toBeUndefined();
+    expect(collection.all).toEqual([]);
   });
 
-  it('rolls back returned collection mutations before commit', async () => {
+  it('rolls back collection mutations before commit', async () => {
     const collection = new Collection<TestEntity>();
 
-    const insertMutation = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    insertMutation.rollback();
+    collection.rollback({ id: 'one' });
 
     expect(collection.get('one')).toBeUndefined();
 
-    const updateMutation = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    await updateMutation.commit();
+    await collection.commit({ id: 'one', sync: noopSync });
 
     collection.upsert({
       entity: {
@@ -418,20 +340,9 @@ describe('Collection', () => {
         name: 'Updated',
         meta: { count: 2 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    collection
-      .upsert({
-        entity: {
-          id: 'one',
-          name: 'Updated',
-          meta: { count: 2 },
-        },
-        sync: noopSync,
-        autoCommit: false,
-      })
-      .rollback();
+    collection.rollback({ id: 'one' });
 
     expect(collection.get('one')).toEqual({
       id: 'one',
@@ -439,21 +350,17 @@ describe('Collection', () => {
       meta: { count: 1 },
     });
 
-    collection
-      .delete({
-        id: 'one',
-        sync: noopSync,
-        autoCommit: false,
-      })
-      ?.rollback();
+    collection.delete({
+      id: 'one',
+      autoCommit: false,
+    });
+    collection.rollback({ id: 'one' });
 
     expect(collection.get('one')).toEqual({
       id: 'one',
       name: 'Original',
       meta: { count: 1 },
     });
-
-    expect(updateMutation.status).toBe('committed');
   });
 
   it('does not notify unsubscribed change handlers', () => {
@@ -470,8 +377,6 @@ describe('Collection', () => {
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
-      autoCommit: false,
     });
 
     expect(receivedChanges).toEqual([]);
@@ -485,8 +390,6 @@ describe('Collection', () => {
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
-      autoCommit: false,
     });
     collection.upsert({
       entity: {
@@ -494,8 +397,6 @@ describe('Collection', () => {
         name: 'Updated',
         meta: { count: 2 },
       },
-      sync: noopSync,
-      autoCommit: false,
     });
 
     const all = collection.all;
@@ -527,53 +428,32 @@ describe('Collection', () => {
         name: 'Stored',
         meta: { count: 1 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    const committedMutation = collection.upsert({
-      entity: {
-        id: 'one',
-        name: 'Stored',
-        meta: { count: 1 },
-      },
-      sync: noopSync,
-      autoCommit: false,
-    });
-    committedMutation.markPending();
-    committedMutation.markCommitted();
+    collection.commit({ id: 'one', sync: noopSync });
 
-    const updateMutation = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Optimistic',
         meta: { count: 2 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-    const deleteMutation = collection.delete({
+    collection.delete({
       id: 'one',
-      sync: noopSync,
       autoCommit: false,
     });
 
-    expect(deleteMutation).toBe(updateMutation);
-    expect(collection.get('one')).toBeUndefined();
-    expect(updateMutation.change).toEqual({
-      type: 'delete',
+    const snap = collection.snapshot('one');
+    expect(snap.current).toBeUndefined();
+    expect(snap.original).toEqual({
       id: 'one',
-      entity: {
-        id: 'one',
-        name: 'Optimistic',
-        meta: { count: 2 },
-      },
-      oldEntity: {
-        id: 'one',
-        name: 'Stored',
-        meta: { count: 1 },
-      },
+      name: 'Stored',
+      meta: { count: 1 },
     });
-    updateMutation.rollback();
+
+    collection.rollback({ id: 'one' });
 
     expect(collection.get('one')).toEqual({
       id: 'one',
@@ -582,54 +462,56 @@ describe('Collection', () => {
     });
   });
 
-  it('tracks mutation status transitions', async () => {
+  it('throws when committing or rolling back without an active mutation', () => {
     const collection = new Collection<TestEntity>();
 
-    const insertMutation = collection.upsert({
+    expect(() => {
+      collection.commit({ id: 'one' });
+    }).toThrow("No active mutation for entity 'one'");
+
+    expect(() => {
+      collection.rollback({ id: 'one' });
+    }).toThrow("No active mutation for entity 'one'");
+  });
+
+  it('commits and retries through collection api', async () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
       autoCommit: false,
     });
-
-    expect(insertMutation.status).toBe('draft');
-
-    const foldedMutation = collection.upsert({
-      entity: {
-        id: 'one',
-        name: 'Updated',
-        meta: { count: 2 },
-      },
-      sync: noopSync,
-      autoCommit: false,
-    });
-
-    expect(foldedMutation).toBe(insertMutation);
-    expect(insertMutation.status).toBe('draft');
 
     let thrown: Error | undefined;
     try {
-      await insertMutation.commit(async () => {
-        throw new Error('save failed');
+      await collection.commit({
+        id: 'one',
+        sync: async () => {
+          throw new Error('save failed');
+        },
       });
     } catch (err) {
       thrown = err instanceof Error ? err : new Error(String(err));
     }
 
     expect(thrown?.message).toBe('save failed');
-    expect(insertMutation.status).toBe('draft');
-    expect(insertMutation.error?.message).toBe('save failed');
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
 
-    insertMutation.markPending();
+    await collection.commit({ id: 'one' });
 
-    expect(insertMutation.status).toBe('pending');
-
-    insertMutation.markCommitted();
-
-    expect(insertMutation.status).toBe('committed');
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
   });
 
   it('ingests externally pushed entities without creating a mutation', () => {
@@ -721,23 +603,24 @@ describe('Collection', () => {
       name: 'Original',
       meta: { count: 1 },
     };
-    const mutation = collection.upsert({
+    collection.upsert({
       entity,
       sync: async () => {},
       autoCommit: true,
     });
 
-    while (mutation.status !== 'committed') {
-      await new Promise(resolve => setTimeout(resolve, 1));
-    }
+    await new Promise(resolve => setTimeout(resolve, 10));
 
-    expect(mutation.status).toBe('committed');
-    expect(mutation.result).toBeUndefined();
+    expect(collection.get('one')).toEqual(entity);
+    expect(collection.snapshot('one')).toEqual({
+      original: undefined,
+      current: entity,
+    });
   });
 
-  it('stores auto-commit errors on the mutation', async () => {
+  it('stores auto-commit errors and allows retry', async () => {
     const collection = new Collection<TestEntity>();
-    const mutation = collection.upsert({
+    collection.upsert({
       entity: {
         id: 'one',
         name: 'Original',
@@ -749,11 +632,26 @@ describe('Collection', () => {
       autoCommit: true,
     });
 
-    while (mutation.status !== 'draft' || !mutation.error) {
-      await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+
+    let thrown: Error | undefined;
+    try {
+      await collection.commit({
+        id: 'one',
+        sync: async () => {
+          throw new Error('sync failed');
+        },
+      });
+    } catch (err) {
+      thrown = err instanceof Error ? err : new Error(String(err));
     }
 
-    expect(mutation.error?.message).toBe('sync failed');
-    expect(mutation.status).toBe('draft');
+    expect(thrown?.message).toBe('sync failed');
   });
 });
