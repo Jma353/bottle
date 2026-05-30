@@ -474,7 +474,7 @@ describe('Collection', () => {
     }).toThrow("No active mutation for entity 'one'");
   });
 
-  it('commits and retries through collection api', async () => {
+  it('commits and removes mutation on failure', async () => {
     const collection = new Collection<TestEntity>();
 
     collection.upsert({
@@ -505,21 +505,13 @@ describe('Collection', () => {
       meta: { count: 1 },
     });
 
-    await collection.commit({ id: 'one' });
-
-    expect(collection.get('one')).toEqual({
-      id: 'one',
-      name: 'Original',
-      meta: { count: 1 },
-    });
+    expect(() => {
+      collection.commit({ id: 'one' });
+    }).toThrow("No active mutation for entity 'one'");
   });
 
   it('ingests externally pushed entities without creating a mutation', () => {
     const collection = new Collection<TestEntity>();
-    const receivedChanges: ItemChange<TestEntity>[] = [];
-    collection.onChange(change => {
-      receivedChanges.push(change);
-    });
 
     const result = collection.ingest({
       entity: {
@@ -540,25 +532,10 @@ describe('Collection', () => {
       name: 'External',
       meta: { count: 1 },
     });
-    expect(receivedChanges).toEqual([
-      {
-        type: 'insert',
-        id: 'one',
-        entity: {
-          id: 'one',
-          name: 'External',
-          meta: { count: 1 },
-        },
-      },
-    ]);
   });
 
   it('ingests externally pushed updates to existing entities', () => {
     const collection = new Collection<TestEntity>();
-    const receivedChanges: ItemChange<TestEntity>[] = [];
-    collection.onChange(change => {
-      receivedChanges.push(change);
-    });
 
     collection.ingest({
       entity: {
@@ -579,20 +556,6 @@ describe('Collection', () => {
       id: 'one',
       name: 'Updated',
       meta: { count: 2 },
-    });
-    expect(receivedChanges[1]).toEqual({
-      type: 'update',
-      id: 'one',
-      entity: {
-        id: 'one',
-        name: 'Updated',
-        meta: { count: 2 },
-      },
-      oldEntity: {
-        id: 'one',
-        name: 'Original',
-        meta: { count: 1 },
-      },
     });
   });
 
@@ -634,14 +597,50 @@ describe('Collection', () => {
     });
 
     snap = collection.snapshot('one');
-    expect(snap.original).toEqual({
+    expect(snap.original).toBeUndefined();
+    expect(snap.current).toEqual({
       id: 'one',
       name: 'External',
       meta: { count: 3 },
     });
+  });
+
+  it('discards a pending insert mutation when the entity is ingested', async () => {
+    const collection = new Collection<TestEntity>();
+
+    const syncPromise = new Promise<void>(() => {});
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Pending',
+        meta: { count: 1 },
+      },
+      sync: async () => {
+        await syncPromise;
+      },
+    });
+
+    let snap = collection.snapshot('one');
+    expect(snap.original).toBeUndefined();
     expect(snap.current).toEqual({
       id: 'one',
       name: 'Pending',
+      meta: { count: 1 },
+    });
+
+    collection.ingest({
+      entity: {
+        id: 'one',
+        name: 'External',
+        meta: { count: 2 },
+      },
+    });
+
+    snap = collection.snapshot('one');
+    expect(snap.original).toBeUndefined();
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'External',
       meta: { count: 2 },
     });
   });
@@ -668,7 +667,7 @@ describe('Collection', () => {
     });
   });
 
-  it('stores auto-commit errors and allows retry', async () => {
+  it('stores auto-commit errors and removes mutation on failure', async () => {
     const collection = new Collection<TestEntity>();
     collection.upsert({
       entity: {
@@ -690,18 +689,35 @@ describe('Collection', () => {
       meta: { count: 1 },
     });
 
-    let thrown: Error | undefined;
-    try {
-      await collection.commit({
+    expect(() => {
+      collection.commit({
         id: 'one',
-        sync: async () => {
-          throw new Error('sync failed');
-        },
+        sync: async () => {},
       });
-    } catch (err) {
-      thrown = err instanceof Error ? err : new Error(String(err));
-    }
+    }).toThrow("No active mutation for entity 'one'");
+  });
 
-    expect(thrown?.message).toBe('sync failed');
+  it('calls onError when auto-commit fails', async () => {
+    const collection = new Collection<TestEntity>();
+    let receivedError: Error | undefined;
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      sync: async () => {
+        throw new Error('sync failed');
+      },
+      onError: (error: Error) => {
+        receivedError = error;
+      },
+      autoCommit: true,
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(receivedError?.message).toBe('sync failed');
   });
 });

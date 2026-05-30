@@ -8,7 +8,9 @@ type TestEntity = {
 };
 
 describe('Mutation', () => {
-  it('records executor errors and returns to draft', async () => {
+  it('calls onError and disposes the mutation on failure', async () => {
+    let settled = false;
+    let errorReceived: Error | undefined;
     const mutation = new Mutation<TestEntity>({
       change: {
         type: 'insert',
@@ -16,6 +18,12 @@ describe('Mutation', () => {
         entity: { id: 'one', name: 'Original' },
       },
       rollbackChange: () => {},
+      onSettled: () => {
+        settled = true;
+      },
+      onError: (error: Error) => {
+        errorReceived = error;
+      },
     });
 
     let thrown: Error | undefined;
@@ -29,11 +37,8 @@ describe('Mutation', () => {
 
     expect(thrown?.message).toBe('save failed');
     expect(mutation.status).toBe('draft');
-    expect(mutation.error?.message).toBe('save failed');
-
-    await mutation.commit();
-
-    expect(mutation.status).toBe('committed');
+    expect(errorReceived?.message).toBe('save failed');
+    expect(settled).toBe(true);
   });
 
   it('rolls back changes before commit and rejects later commits', async () => {

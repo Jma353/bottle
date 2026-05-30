@@ -83,11 +83,12 @@ export class Collection<T extends Entity> {
   upsert(args: {
     entity: T;
     sync?: (change: ItemChange<T>) => Promise<void>;
+    onError?: (error: Error) => void;
     autoCommit?: boolean;
   }): void {
-    const { entity, sync, autoCommit = true } = args;
+    const { entity, sync, onError, autoCommit = true } = args;
     const change = this.applyUpsert(entity);
-    const mutation = this.createMutation(change);
+    const mutation = this.createMutation({ change, onError });
     if (autoCommit) {
       mutation.commit(sync).catch(() => {});
     }
@@ -100,12 +101,13 @@ export class Collection<T extends Entity> {
     id: string;
     patch: Partial<Omit<T, 'id'>>;
     sync?: (change: ItemChange<T>) => Promise<void>;
+    onError?: (error: Error) => void;
     autoCommit?: boolean;
   }): void {
-    const { id, patch, sync, autoCommit = true } = args;
+    const { id, patch, sync, onError, autoCommit = true } = args;
     const existing = this.get(id);
     const updated = { ...(existing as T), ...patch, id } as T;
-    this.upsert({ entity: updated, sync, autoCommit });
+    this.upsert({ entity: updated, sync, onError, autoCommit });
   }
 
   /**
@@ -114,14 +116,15 @@ export class Collection<T extends Entity> {
   delete(args: {
     id: string;
     sync?: (change: ItemChange<T>) => Promise<void>;
+    onError?: (error: Error) => void;
     autoCommit?: boolean;
   }): void {
-    const { id, sync, autoCommit = true } = args;
+    const { id, sync, onError, autoCommit = true } = args;
     const change = this.applyDelete(id);
     if (!change) {
       return;
     }
-    const mutation = this.createMutation(change);
+    const mutation = this.createMutation({ change, onError });
     if (autoCommit) {
       mutation.commit(sync).catch(() => {});
     }
@@ -131,9 +134,10 @@ export class Collection<T extends Entity> {
    * Returns the original and current snapshots for the given entity id.
    */
   snapshot(id: string): EntitySnapshots<T> {
-    const snapshots = this.mutationManager.getSnapshots(id);
-    if (snapshots.original !== undefined || snapshots.current !== undefined) {
-      return snapshots;
+    const original = this.mutationManager.getOriginalSnapshot(id);
+    const current = this.mutationManager.getCurrentSnapshot(id);
+    if (original !== undefined || current !== undefined) {
+      return { original, current };
     }
     return {
       original: undefined,
@@ -178,12 +182,24 @@ export class Collection<T extends Entity> {
 
     const mutation = this.mutationManager.getActiveMutation(entity.id);
     if (mutation) {
-      this.mutationManager.updateOriginalSnapshot(
-        entity.id,
-        frozen as DeepReadonly<T>,
-      );
+      if (mutation.change.type === 'insert') {
+        this.mutationManager.removePendingSnapshot({
+          id: entity.id,
+          mutationId: mutation.id,
+        });
+        this.mutationManager.removeActiveMutation({
+          id: entity.id,
+          mutationId: mutation.id,
+        });
+      } else {
+        this.mutationManager.setOriginalSnapshot({
+          id: entity.id,
+          original: frozen as DeepReadonly<T>,
+        });
+      }
     }
 
+    // Intentionally no emit() in here
     return frozen as DeepReadonly<T>;
   }
 
@@ -231,7 +247,11 @@ export class Collection<T extends Entity> {
     return change;
   }
 
-  private createMutation(change: ItemChange<T>): Mutation<T> {
+  private createMutation(args: {
+    change: ItemChange<T>;
+    onError?: (error: Error) => void;
+  }): Mutation<T> {
+    const { change, onError } = args;
     const activeMutation = this.mutationManager.getActiveMutation(change.id);
     if (activeMutation && activeMutation.status === 'draft') {
       return this.foldMutation({
@@ -248,17 +268,18 @@ export class Collection<T extends Entity> {
       },
       onSettled: () => {
         const currentChange = mutation.change;
-        this.mutationManager.removePendingSnapshot(
-          currentChange.id,
-          mutation.id,
-        );
-        this.mutationManager.removeActiveMutation(
-          currentChange.id,
-          mutation.id,
-        );
+        this.mutationManager.removePendingSnapshot({
+          id: currentChange.id,
+          mutationId: mutation.id,
+        });
+        this.mutationManager.removeActiveMutation({
+          id: currentChange.id,
+          mutationId: mutation.id,
+        });
       },
+      onError,
     });
-    this.mutationManager.registerActiveMutation(mutation);
+    this.mutationManager.setActiveMutation(mutation);
 
     return mutation;
   }

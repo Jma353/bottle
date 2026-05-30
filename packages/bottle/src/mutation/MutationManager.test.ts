@@ -15,12 +15,8 @@ describe('MutationManager', () => {
   it('returns undefined for snapshots when no mutation is active', () => {
     const manager = new MutationManager<TestEntity>();
 
-    expect(manager.getSnapshot('one')).toBeUndefined();
+    expect(manager.getOriginalSnapshot('one')).toBeUndefined();
     expect(manager.getCurrentSnapshot('one')).toBeUndefined();
-    expect(manager.getSnapshots('one')).toEqual({
-      original: undefined,
-      current: undefined,
-    });
   });
 
   it('tracks snapshots for an insert mutation', () => {
@@ -34,21 +30,13 @@ describe('MutationManager', () => {
       rollbackChange: () => {},
     });
 
-    manager.registerActiveMutation(mutation);
+    manager.setActiveMutation(mutation);
 
-    expect(manager.getSnapshot('one')).toBeUndefined();
+    expect(manager.getOriginalSnapshot('one')).toBeUndefined();
     expect(manager.getCurrentSnapshot('one')).toEqual({
       id: 'one',
       name: 'Original',
       meta: { count: 1 },
-    });
-    expect(manager.getSnapshots('one')).toEqual({
-      original: undefined,
-      current: {
-        id: 'one',
-        name: 'Original',
-        meta: { count: 1 },
-      },
     });
   });
 
@@ -64,9 +52,9 @@ describe('MutationManager', () => {
       rollbackChange: () => {},
     });
 
-    manager.registerActiveMutation(mutation);
+    manager.setActiveMutation(mutation);
 
-    expect(manager.getSnapshot('one')).toEqual({
+    expect(manager.getOriginalSnapshot('one')).toEqual({
       id: 'one',
       name: 'Original',
       meta: { count: 1 },
@@ -90,9 +78,9 @@ describe('MutationManager', () => {
       rollbackChange: () => {},
     });
 
-    manager.registerActiveMutation(mutation);
+    manager.setActiveMutation(mutation);
 
-    expect(manager.getSnapshot('one')).toEqual({
+    expect(manager.getOriginalSnapshot('one')).toEqual({
       id: 'one',
       name: 'Original',
       meta: { count: 1 },
@@ -111,10 +99,10 @@ describe('MutationManager', () => {
       rollbackChange: () => {},
     });
 
-    manager.registerActiveMutation(mutation);
-    manager.removePendingSnapshot('one', mutation.id);
+    manager.setActiveMutation(mutation);
+    manager.removePendingSnapshot({ id: 'one', mutationId: mutation.id });
 
-    expect(manager.getSnapshot('one')).toBeUndefined();
+    expect(manager.getOriginalSnapshot('one')).toBeUndefined();
     expect(manager.getCurrentSnapshot('one')).toBeUndefined();
   });
 
@@ -129,35 +117,14 @@ describe('MutationManager', () => {
       rollbackChange: () => {},
     });
 
-    manager.registerActiveMutation(mutation);
-    manager.removeActiveMutation('one', mutation.id);
+    manager.setActiveMutation(mutation);
+    manager.removeActiveMutation({ id: 'one', mutationId: mutation.id });
 
     expect(manager.getActiveMutation('one')).toBeUndefined();
     expect(manager.getCurrentSnapshot('one')).toEqual({
       id: 'one',
       name: 'Original',
       meta: { count: 1 },
-    });
-  });
-
-  it('returns the pending snapshot metadata', () => {
-    const manager = new MutationManager<TestEntity>();
-    const mutation = new Mutation<TestEntity>({
-      change: {
-        type: 'insert',
-        id: 'one',
-        entity: { id: 'one', name: 'Original', meta: { count: 1 } },
-      },
-      rollbackChange: () => {},
-    });
-
-    manager.registerActiveMutation(mutation);
-
-    const pending = manager.getPendingSnapshot('one');
-    expect(pending).toEqual({
-      mutationId: mutation.id,
-      original: undefined,
-      current: { id: 'one', name: 'Original', meta: { count: 1 } },
     });
   });
 
@@ -172,7 +139,7 @@ describe('MutationManager', () => {
       rollbackChange: () => {},
     });
 
-    manager.registerActiveMutation(mutation);
+    manager.setActiveMutation(mutation);
 
     expect(manager.getActiveMutation('one')).toBe(mutation);
   });

@@ -11,7 +11,6 @@ type ExecuteFunction<T extends Entity> = (
 export class Mutation<T extends Entity> {
   id: string = crypto.randomUUID();
   status: MutationStatus = 'draft';
-  error?: Error;
   result?: unknown;
   private rolledBack = false;
 
@@ -23,14 +22,14 @@ export class Mutation<T extends Entity> {
   private readonly rollbackChange: () => void;
 
   /**
-   * Called when the mutation reaches a terminal status (committed or rolled back).
+   * Called when the mutation reaches a terminal status (committed, rolled back, or failed).
    */
   private readonly onSettled: () => void;
 
   /**
-   * Called whenever the mutation's status or data changes.
+   * Called when the mutation's commit fails.
    */
-  private readonly onChanged: () => void;
+  private readonly onError?: (error: Error) => void;
 
   /**
    * Default executor used to commit the mutation when no override is provided.
@@ -40,22 +39,20 @@ export class Mutation<T extends Entity> {
   constructor(args: {
     change: ItemChange<T>;
     rollbackChange: () => void;
-    onChanged?: () => void;
     onSettled?: () => void;
+    onError?: (error: Error) => void;
     defaultExecute?: ExecuteFunction<T>;
   }) {
-    const { change, rollbackChange, onChanged, onSettled, defaultExecute } =
-      args;
+    const { change, rollbackChange, onSettled, onError, defaultExecute } = args;
     this.change = change;
     this.rollbackChange = rollbackChange;
-    this.onChanged = onChanged ?? (() => {});
     this.onSettled = onSettled ?? (() => {});
+    this.onError = onError;
     this.defaultExecute = defaultExecute;
 
     makeObservable(this, {
       id: observable,
       status: observable,
-      error: observable,
       result: observable,
       change: observable.ref,
       markPending: action.bound,
@@ -75,7 +72,6 @@ export class Mutation<T extends Entity> {
       throw new Error(`Cannot update mutation in status '${this.status}'`);
     }
     this.change = change;
-    this.onChanged();
   }
 
   /**
@@ -98,8 +94,8 @@ export class Mutation<T extends Entity> {
    * Transitions the mutation to pending status.
    */
   markPending(): void {
-    if (this.rolledBack) {
-      throw new Error('Cannot mark a rolled-back mutation pending');
+    if (this.rolledBack || this.status === 'committed') {
+      throw new Error('Cannot mark a settled mutation pending');
     }
     if (this.status !== 'draft') {
       throw new Error(
@@ -107,9 +103,7 @@ export class Mutation<T extends Entity> {
       );
     }
 
-    this.error = undefined;
     this.status = 'pending';
-    this.onChanged();
   }
 
   /**
@@ -125,7 +119,6 @@ export class Mutation<T extends Entity> {
 
     this.result = result;
     this.status = 'committed';
-    this.onChanged();
     this.onSettled();
   }
 
@@ -135,6 +128,9 @@ export class Mutation<T extends Entity> {
   async commit(executor?: ExecuteFunction<T>): Promise<void> {
     if (this.rolledBack) {
       throw new Error('Cannot commit a rolled-back mutation');
+    }
+    if (this.status === 'committed') {
+      throw new Error('Cannot commit a settled mutation');
     }
     if (this.status !== 'draft') {
       throw new Error(`Cannot commit mutation in status '${this.status}'`);
@@ -154,9 +150,10 @@ export class Mutation<T extends Entity> {
       this.markCommitted();
     } catch (err) {
       this.status = 'draft';
-      this.error = err instanceof Error ? err : new Error(String(err));
-      this.onChanged();
-      throw this.error;
+      const error = err instanceof Error ? err : new Error(String(err));
+      this.onError?.(error);
+      this.onSettled();
+      throw error;
     }
   }
 }
