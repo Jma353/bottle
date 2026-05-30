@@ -9,24 +9,32 @@ import { ChangeLog } from './components/ChangeLog';
 import { UsersWithPosts } from './components/UsersWithPosts';
 import { store, type Post, type User } from './store';
 
+function formatUser(user: User): string {
+  return `${user.name} ${user.age}`;
+}
+
+function formatPost(post: Post): string {
+  return `${post.authorId} "${post.title}"`;
+}
+
 function formatUserChange(c: ItemChange<User>): string {
   if (c.type === 'insert') {
-    return `insert ${c.id}: ${c.entity.name}`;
+    return `insert ${c.id}: ${formatUser(c.entity)}`;
   }
   if (c.type === 'update') {
-    return `update ${c.id}: ${c.oldEntity!.name} ${c.oldEntity!.age} -> ${c.entity.name} ${c.entity.age}`;
+    return `update ${c.id}: ${formatUser(c.oldEntity!)} -> ${formatUser(c.entity)}`;
   }
-  return `delete ${c.id}: ${c.entity.name}`;
+  return `delete ${c.id}: ${formatUser(c.entity)}`;
 }
 
 function formatPostChange(c: ItemChange<Post>): string {
   if (c.type === 'insert') {
-    return `insert ${c.id}: "${c.entity.title}"`;
+    return `insert ${c.id}: ${formatPost(c.entity)}`;
   }
   if (c.type === 'update') {
-    return `update ${c.id}: "${c.oldEntity!.title}" -> "${c.entity.title}"`;
+    return `update ${c.id}: ${formatPost(c.oldEntity!)} -> ${formatPost(c.entity)}"`;
   }
-  return `delete ${c.id}: "${c.entity.title}"`;
+  return `delete ${c.id}: ${formatPost(c.entity)}`;
 }
 
 function AppInner() {

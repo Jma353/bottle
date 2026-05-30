@@ -16,8 +16,8 @@ type Post = {
 const API_BASE = '/api';
 
 class Store {
-  users = new Collection<User>('users');
-  posts = new Collection<Post>('posts');
+  users = new Collection<User>();
+  posts = new Collection<Post>();
 
   constructor() {
     makeAutoObservable(this);
