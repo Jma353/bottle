@@ -1,0 +1,36 @@
+{
+  "name": "playground-posts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:all": "concurrently \"pnpm dev\" \"pnpm server\"",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "server": "tsx server.ts"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.5.0",
+    "better-sqlite3": "12.10.0",
+    "bottle": "workspace:*",
+    "express": "5.2.1",
+    "mobx": "6.15.4",
+    "mobx-react-lite": "4.1.1",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "styled-components": "6.4.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/express": "5.0.6",
+    "@types/node": "22.0.0",
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "@vitejs/plugin-react": "4.3.4",
+    "concurrently": "9.1.2",
+    "tsx": "4.22.3",
+    "typescript": "5.9.3",
+    "vite": "6.0.11"
+  }
+}

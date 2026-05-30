@@ -1,0 +1,35 @@
+{
+  "name": "bottle",
+  "version": "0.1.0",
+  "description": "Lightweight reactive collections for normalized client data with mutations",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "rstest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "mobx": "6.15.4"
+  },
+  "devDependencies": {
+    "@rstest/core": "0.10.3",
+    "fake-indexeddb": "6.2.5",
+    "tsdown": "0.22.1",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

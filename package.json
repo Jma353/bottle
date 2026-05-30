@@ -1,0 +1,23 @@
+{
+  "name": "bottle-repo",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter bottle build",
+    "dev": "pnpm --filter bottle dev",
+    "fmt": "oxfmt --write packages/bottle/src",
+    "fmt:check": "oxfmt --check packages/bottle/src",
+    "lint": "oxlint .",
+    "test": "pnpm --filter bottle test",
+    "typecheck": "pnpm --filter bottle typecheck"
+  },
+  "devDependencies": {
+    "mobx": "6.15.4",
+    "oxfmt": "0.52.0",
+    "oxlint": "1.67.0",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
