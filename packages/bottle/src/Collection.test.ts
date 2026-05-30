@@ -596,6 +596,56 @@ describe('Collection', () => {
     });
   });
 
+  it('updates snapshot original when ingesting during an active mutation', () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Pending',
+        meta: { count: 2 },
+      },
+      autoCommit: false,
+    });
+
+    let snap = collection.snapshot('one');
+    expect(snap.original).toBeUndefined();
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Pending',
+      meta: { count: 2 },
+    });
+
+    collection.ingest({
+      entity: {
+        id: 'one',
+        name: 'External',
+        meta: { count: 3 },
+      },
+    });
+
+    snap = collection.snapshot('one');
+    expect(snap.original).toEqual({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Pending',
+      meta: { count: 2 },
+    });
+  });
+
   it('auto-commits mutations when autoCommit is true', async () => {
     const collection = new Collection<TestEntity>();
     const entity = {

@@ -175,6 +175,15 @@ export class Collection<T extends Entity> {
     const { entity } = args;
     const frozen = deepFreeze(entity);
     this.items.set(entity.id, frozen);
+
+    const mutation = this.mutationManager.getActiveMutation(entity.id);
+    if (mutation) {
+      this.mutationManager.updateOriginalSnapshot(
+        entity.id,
+        frozen as DeepReadonly<T>,
+      );
+    }
+
     return frozen as DeepReadonly<T>;
   }
 

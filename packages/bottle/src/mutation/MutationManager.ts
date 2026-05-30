@@ -99,6 +99,16 @@ export class MutationManager<T extends Entity> {
   }
 
   /**
+   * Updates the original snapshot for the given entity id.
+   */
+  updateOriginalSnapshot(id: string, original: DeepReadonly<T>): void {
+    const pending = this.pendingSnapshots.get(id);
+    if (pending) {
+      pending.original = original;
+    }
+  }
+
+  /**
    * Removes the pending snapshot if it matches the given mutation id.
    */
   removePendingSnapshot(id: string, mutationId: string): void {
