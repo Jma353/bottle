@@ -173,18 +173,8 @@ export class Collection<T extends Entity> {
    */
   ingest(args: { entity: T }): DeepReadonly<T> {
     const { entity } = args;
-    const existing = this.items.get(entity.id);
     const frozen = deepFreeze(entity);
-    const change: ItemChange<T> = {
-      type: existing ? 'update' : 'insert',
-      id: entity.id,
-      entity: frozen as DeepReadonly<T>,
-    };
-    if (existing) {
-      change.oldEntity = existing as DeepReadonly<T>;
-    }
     this.items.set(entity.id, frozen);
-    this.emit(change);
     return frozen as DeepReadonly<T>;
   }
 
