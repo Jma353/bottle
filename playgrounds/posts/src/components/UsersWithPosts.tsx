@@ -112,18 +112,16 @@ function UsersWithPostsInner(props: Props) {
             {isEditingUser ? (
               <>
                 <EditRow>
-                  <Input
+                  <StyledInput
                     value={editName}
                     onChange={e => onEditNameChange(e.target.value)}
                     placeholder="Name"
-                    style={{ width: '120px' }}
                   />
-                  <Input
+                  <StyledInput
                     value={editAge}
                     onChange={e => onEditAgeChange(e.target.value)}
                     placeholder="Age"
                     type="number"
-                    style={{ width: '120px' }}
                   />
                 </EditRow>
                 <EditRow>
@@ -153,21 +151,20 @@ function UsersWithPostsInner(props: Props) {
                       {isEditingPost && !isDraft ? (
                         <>
                           <EditRow>
-                            <Input
+                            <StyledInput
                               value={editPostTitle}
                               onChange={e =>
                                 onEditPostTitleChange(e.target.value)
                               }
                               placeholder="Title"
-                              style={{ width: '120px' }}
                             />
-                            <div style={{ width: '120px' }}>
+                            <AuthorSelectWrapper>
                               <AuthorSelect
                                 users={users}
                                 value={editPostAuthorId || null}
                                 onChange={onEditPostAuthorIdChange}
                               />
-                            </div>
+                            </AuthorSelectWrapper>
                           </EditRow>
                           <EditRow>
                             <Button onClick={onSavePostEdit}>Save</Button>
@@ -194,14 +191,9 @@ function UsersWithPostsInner(props: Props) {
                                 <strong>{field.label}:</strong>{' '}
                                 {field.oldValue !== undefined ? (
                                   <>
-                                    <span
-                                      style={{
-                                        textDecoration: 'line-through',
-                                        color: 'var(--color-gray-400)',
-                                      }}
-                                    >
+                                    <StrikethroughSpan>
                                       {field.oldValue}
-                                    </span>{' '}
+                                    </StrikethroughSpan>{' '}
                                     → {field.newValue}
                                   </>
                                 ) : (
@@ -349,4 +341,17 @@ const ChangedFieldsTitle = styled.div`
 const ChangedFieldItem = styled.div`
   color: var(--color-gray-600);
   line-height: 1.5;
+`;
+
+const StyledInput = styled(Input)`
+  width: 120px;
+`;
+
+const AuthorSelectWrapper = styled.div`
+  width: 120px;
+`;
+
+const StrikethroughSpan = styled.span`
+  text-decoration: line-through;
+  color: var(--color-gray-400);
 `;
