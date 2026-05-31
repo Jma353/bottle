@@ -405,6 +405,20 @@ export class Collection<T extends Entity> {
       change,
     });
 
+    // If the folded change results in no net difference (entity == oldEntity),
+    // roll back the mutation entirely so the draft is removed and the entity
+    // reverts to its committed state.
+    if (
+      foldedChange.type === 'update' &&
+      foldedChange.oldEntity &&
+      isEqual(foldedChange.entity, foldedChange.oldEntity)
+    ) {
+      mutation.updateChange({ change: foldedChange });
+      this.mutationManager.setPendingSnapshot(mutation);
+      mutation.rollback();
+      return mutation;
+    }
+
     mutation.updateChange({ change: foldedChange });
     this.mutationManager.setPendingSnapshot(mutation);
 

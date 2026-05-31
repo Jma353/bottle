@@ -255,6 +255,54 @@ describe('Collection', () => {
     });
   });
 
+  it('rolls back a draft update when folded back to the original entity', async () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'one', sync: noopSync });
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Changed',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+
+    let snap = collection.snapshot('one');
+    expect(snap.isDraft).toBe(true);
+    expect(snap.original).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+
+    snap = collection.snapshot('one');
+    expect(snap.isDraft).toBe(false);
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+  });
+
   it('preserves pending mutations when an entity receives later updates', async () => {
     const collection = new Collection<TestEntity>();
     collection.upsert({
