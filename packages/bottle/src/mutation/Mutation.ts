@@ -9,9 +9,24 @@ type ExecuteFunction<T extends Entity> = (
 ) => Promise<void>;
 
 export class Mutation<T extends Entity> {
+  /**
+   * Unique identifier for the mutation.
+   */
   id: string = crypto.randomUUID();
+
+  /**
+   * Current lifecycle status of the mutation.
+   */
   status: MutationStatus = 'draft';
+
+  /**
+   * Optional result returned from successfully committing the mutation.
+   */
   result?: unknown;
+
+  /**
+   * Whether the mutation has been rolled back.
+   */
   private rolledBack = false;
 
   public change: ItemChange<T>;
