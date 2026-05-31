@@ -343,7 +343,7 @@ export class Collection<T extends Entity> {
     };
   }
 
-  private applyUpsert(entity: T): ItemChange<T> | undefined {
+  protected applyUpsert(entity: T): ItemChange<T> | undefined {
     const existing = this.items.get(entity.id);
     const frozen = deepFreeze<T>(entity);
     if (existing && isEqual(existing, frozen)) {
@@ -365,7 +365,7 @@ export class Collection<T extends Entity> {
     return change;
   }
 
-  private applyDelete(id: string): ItemChange<T> | undefined {
+  protected applyDelete(id: string): ItemChange<T> | undefined {
     const existing = this.items.get(id);
     if (!existing) {
       return undefined;
@@ -385,7 +385,9 @@ export class Collection<T extends Entity> {
     return change;
   }
 
-  private resolveExecutor(change: ItemChange<T>): SyncFunction<T> | undefined {
+  protected resolveExecutor(
+    change: ItemChange<T>,
+  ): SyncFunction<T> | undefined {
     switch (change.type) {
       case 'create': {
         return this.createCallback;
@@ -402,7 +404,7 @@ export class Collection<T extends Entity> {
     }
   }
 
-  private createMutation(args: {
+  protected createMutation(args: {
     change: ItemChange<T>;
     onCommit?: (change: ItemChange<T>) => void;
     onError?: (error: Error) => void;
@@ -439,7 +441,7 @@ export class Collection<T extends Entity> {
     return mutation;
   }
 
-  private foldMutation(args: {
+  protected foldMutation(args: {
     mutation: Mutation<T>;
     change: ItemChange<T>;
     onCommit?: (change: ItemChange<T>) => void;
@@ -479,7 +481,7 @@ export class Collection<T extends Entity> {
     return mutation;
   }
 
-  private rollbackMutation(mutation: Mutation<T>): void {
+  protected rollbackMutation(mutation: Mutation<T>): void {
     const { change } = mutation;
 
     if (!this.isCurrentMutationSnapshot({ change })) {
@@ -497,7 +499,9 @@ export class Collection<T extends Entity> {
     }
   }
 
-  private isCurrentMutationSnapshot(args: { change: ItemChange<T> }): boolean {
+  protected isCurrentMutationSnapshot(args: {
+    change: ItemChange<T>;
+  }): boolean {
     const { change } = args;
     const current = this.items.get(change.id);
 
@@ -508,7 +512,7 @@ export class Collection<T extends Entity> {
     return current === change.entity;
   }
 
-  private emit(change: ItemChange<T>): void {
+  protected emit(change: ItemChange<T>): void {
     for (const handler of this.handlers) {
       handler(change);
     }
