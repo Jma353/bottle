@@ -12,7 +12,7 @@ export class Mutation<T extends Entity> {
   /**
    * Unique identifier for the mutation.
    */
-  id: string = crypto.randomUUID();
+  id: string;
 
   /**
    * Current lifecycle status of the mutation.
@@ -57,8 +57,13 @@ export class Mutation<T extends Entity> {
     onSettled?: () => void;
     onError?: (error: Error) => void;
     defaultExecute?: ExecuteFunction<T>;
+    // Used when restoring a mutation from storage
+    id?: string;
   }) {
-    const { change, rollbackChange, onSettled, onError, defaultExecute } = args;
+    const { change, rollbackChange, onSettled, onError, defaultExecute, id } =
+      args;
+
+    this.id = id ?? crypto.randomUUID();
     this.change = change;
     this.rollbackChange = rollbackChange;
     this.onSettled = onSettled ?? (() => {});

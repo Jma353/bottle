@@ -1132,6 +1132,47 @@ describe('Collection', () => {
       name: 'External',
       meta: { count: 3 },
     });
+
+    const stored = await storage.getAll();
+    expect(stored.mutations.length).toBe(1);
+    expect(stored.mutations[0]?.id).toBe('mut-1');
+  });
+
+  it('does not duplicate stored mutations on repeated load', async () => {
+    const storage = new LocalStorage<TestEntity>();
+
+    await storage.setEntity({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+    await storage.setMutation({
+      id: 'mut-1',
+      change: {
+        type: 'update',
+        id: 'one',
+        entity: { id: 'one', name: 'Updated', meta: { count: 2 } },
+        oldEntity: { id: 'one', name: 'External', meta: { count: 3 } },
+      },
+      status: 'draft',
+    });
+    await storage.setSnapshot({
+      id: 'one',
+      original: { id: 'one', name: 'External', meta: { count: 3 } },
+      current: { id: 'one', name: 'Updated', meta: { count: 2 } },
+      mutationId: 'mut-1',
+    });
+
+    const collection = new Collection<TestEntity>({ storage });
+    await collection.load();
+    await collection.load();
+    await collection.load();
+
+    const stored = await storage.getAll();
+    expect(stored.mutations.length).toBe(1);
+    expect(stored.mutations[0]?.id).toBe('mut-1');
+    expect(stored.snapshots.length).toBe(1);
+    expect(stored.snapshots[0]?.id).toBe('one');
   });
 
   it('syncs upserts to storage', async () => {

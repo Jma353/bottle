@@ -74,6 +74,7 @@ export class Collection<T extends Entity> {
       }
 
       const mutation = new Mutation<T>({
+        id: storedMutation.id,
         change: storedMutation.change,
         rollbackChange: () => {
           this.rollbackMutation(mutation);
