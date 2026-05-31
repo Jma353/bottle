@@ -18,7 +18,7 @@ pnpm add bottle
 
 ### Writing data
 
-`upsert` inserts or replaces one entity. `delete` removes an entity by id. Both apply optimistically and can sync to a server automatically when the collection is configured with `create`, `update`, and `delete` callbacks.
+`create` inserts or updates one entity. `delete` removes an entity by id. Both apply optimistically and can sync to a server automatically when the collection is configured with `create`, `update`, and `delete` callbacks.
 
 ```ts
 import { Collection } from 'bottle';
@@ -44,7 +44,7 @@ const posts = new Collection<Post>({
   },
 });
 
-posts.upsert({
+posts.create({
   entity: { id: 'post-1', title: 'Hello', published: false },
 });
 
@@ -98,10 +98,10 @@ for (const id of deletedPostIds) {
 
 ### Drafts and pending mutations
 
-By default, `upsert`, `update`, and `delete` auto-commit. Pass `autoCommit: false` to queue the change instead. Each accepts optional `onCommit` and `onError` callbacks.
+By default, `create`, `update`, and `delete` auto-commit. Pass `autoCommit: false` to queue the change instead. Each accepts optional `onCommit` and `onError` callbacks.
 
 ```ts
-posts.upsert({
+posts.create({
   entity: { id: 'post-2', title: 'Draft', published: false },
   autoCommit: false,
 });

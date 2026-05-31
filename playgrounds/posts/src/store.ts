@@ -113,7 +113,7 @@ class Store {
   addUser(args: { name: string; age: number }) {
     const { name, age } = args;
     const id = `u-${Date.now()}`;
-    this.users.upsert({
+    this.users.create({
       entity: { id, name, age },
       autoCommit: true,
     });
@@ -139,7 +139,7 @@ class Store {
   addPost(args: { title: string; authorId: string }) {
     const { title, authorId } = args;
     const id = `p-${Date.now()}`;
-    this.posts.upsert({
+    this.posts.create({
       entity: { id, title, authorId },
       autoCommit: false,
     });

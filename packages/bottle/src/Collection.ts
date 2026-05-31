@@ -66,7 +66,7 @@ export class Collection<T extends Entity> {
     makeObservable(this, {
       all: computed,
       get: action.bound,
-      upsert: action.bound,
+      create: action.bound,
       delete: action.bound,
       update: action.bound,
       ingest: action.bound,
@@ -176,9 +176,9 @@ export class Collection<T extends Entity> {
   }
 
   /**
-   * Inserts or updates an entity.
+   * Creates or updates an entity.
    */
-  upsert(args: {
+  create(args: {
     entity: T;
     onCommit?: (change: ItemChange<T>) => void;
     onError?: (error: Error) => void;
@@ -209,7 +209,7 @@ export class Collection<T extends Entity> {
     const { id, patch, onCommit, onError, autoCommit = true } = args;
     const existing = this.get(id);
     const updated = { ...(existing as T), ...patch, id };
-    this.upsert({ entity: updated, onCommit, onError, autoCommit });
+    this.create({ entity: updated, onCommit, onError, autoCommit });
   }
 
   /**

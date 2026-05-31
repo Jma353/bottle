@@ -23,7 +23,7 @@ describe('Collection', () => {
       receivedChanges.push(change);
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -62,14 +62,14 @@ describe('Collection', () => {
       receivedChanges.push(change);
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
       },
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Updated',
@@ -98,21 +98,21 @@ describe('Collection', () => {
     });
   });
 
-  it('no-ops when upserting an identical existing entity', () => {
+  it('no-ops when createing an identical existing entity', () => {
     const collection = new Collection<TestEntity>();
     const receivedChanges: ItemChange<TestEntity>[] = [];
     collection.onChange(change => {
       receivedChanges.push(change);
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
       },
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -136,7 +136,7 @@ describe('Collection', () => {
       receivedChanges.push(change);
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -162,7 +162,7 @@ describe('Collection', () => {
       create: noopSync,
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -170,7 +170,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Updated',
@@ -208,7 +208,7 @@ describe('Collection', () => {
 
   it('folds draft updates and deletes into one active mutation per entity', async () => {
     const collection = new Collection<TestEntity>();
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -218,7 +218,7 @@ describe('Collection', () => {
     });
     await collection.commit({ id: 'one' });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Updated',
@@ -226,7 +226,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Latest',
@@ -260,7 +260,7 @@ describe('Collection', () => {
   it('rolls back a draft update when folded back to the original entity', async () => {
     const collection = new Collection<TestEntity>();
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -270,7 +270,7 @@ describe('Collection', () => {
     });
     await collection.commit({ id: 'one' });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Changed',
@@ -287,7 +287,7 @@ describe('Collection', () => {
       meta: { count: 1 },
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -314,7 +314,7 @@ describe('Collection', () => {
         await pendingCommit;
       },
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -324,7 +324,7 @@ describe('Collection', () => {
     });
     await collection.commit({ id: 'one' });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Pending',
@@ -337,7 +337,7 @@ describe('Collection', () => {
     });
     const pendingResult = collection.commit({ id: 'one' });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Later',
@@ -384,7 +384,7 @@ describe('Collection', () => {
       receivedChanges.push(change);
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -431,7 +431,7 @@ describe('Collection', () => {
       create: noopSync,
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -443,7 +443,7 @@ describe('Collection', () => {
 
     expect(collection.get('one')).toBeUndefined();
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -453,7 +453,7 @@ describe('Collection', () => {
     });
     await collection.commit({ id: 'one' });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Updated',
@@ -490,7 +490,7 @@ describe('Collection', () => {
     });
 
     unsubscribe();
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -503,14 +503,14 @@ describe('Collection', () => {
 
   it('returns frozen readonly snapshots from collection read APIs', () => {
     const collection = new Collection<TestEntity>();
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
       },
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'two',
         name: 'Updated',
@@ -541,7 +541,7 @@ describe('Collection', () => {
   it('diffs folded optimistic changes against ground truth', () => {
     const collection = new Collection<TestEntity>();
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Stored',
@@ -551,7 +551,7 @@ describe('Collection', () => {
     });
     collection.commit({ id: 'one' });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Optimistic',
@@ -601,7 +601,7 @@ describe('Collection', () => {
       },
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -683,7 +683,7 @@ describe('Collection', () => {
       create: noopSync,
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -692,7 +692,7 @@ describe('Collection', () => {
       autoCommit: false,
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Pending',
@@ -736,7 +736,7 @@ describe('Collection', () => {
       },
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Pending',
@@ -776,7 +776,7 @@ describe('Collection', () => {
       create: noopSync,
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -784,7 +784,7 @@ describe('Collection', () => {
       },
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Pending',
@@ -866,7 +866,7 @@ describe('Collection', () => {
   it('removes an active mutation when the entity is removed', () => {
     const collection = new Collection<TestEntity>();
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Pending',
@@ -914,7 +914,7 @@ describe('Collection', () => {
       name: 'Original',
       meta: { count: 1 },
     };
-    collection.upsert({
+    collection.create({
       entity,
       autoCommit: true,
     });
@@ -935,7 +935,7 @@ describe('Collection', () => {
         throw new Error('sync failed');
       },
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -965,7 +965,7 @@ describe('Collection', () => {
     });
     let receivedError: Error | undefined;
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -985,7 +985,7 @@ describe('Collection', () => {
   it('clears snapshots when an update mutation settles on commit', async () => {
     const collection = new Collection<TestEntity>();
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -995,7 +995,7 @@ describe('Collection', () => {
     });
     await collection.commit({ id: 'one' });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Updated',
@@ -1019,7 +1019,7 @@ describe('Collection', () => {
   it('clears snapshots when a mutation settles on rollback', () => {
     const collection = new Collection<TestEntity>();
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -1027,7 +1027,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Updated',
@@ -1047,7 +1047,7 @@ describe('Collection', () => {
   it('clears snapshots when a mutation settles on commit failure', async () => {
     const collection = new Collection<TestEntity>();
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -1055,7 +1055,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Updated',
@@ -1085,7 +1085,7 @@ describe('Collection', () => {
       create: noopSync,
     });
 
-    collection.upsert({
+    collection.create({
       entity: {
         id: 'one',
         name: 'Original',
@@ -1227,11 +1227,11 @@ describe('Collection', () => {
     expect(stored.snapshots[0]?.id).toBe('one');
   });
 
-  it('syncs upserts to storage', async () => {
+  it('syncs creates to storage', async () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       autoCommit: false,
     });
@@ -1246,7 +1246,7 @@ describe('Collection', () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       autoCommit: false,
     });
@@ -1287,7 +1287,7 @@ describe('Collection', () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       autoCommit: false,
     });
@@ -1303,7 +1303,7 @@ describe('Collection', () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       autoCommit: false,
     });
@@ -1318,7 +1318,7 @@ describe('Collection', () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       autoCommit: false,
     });
@@ -1333,7 +1333,7 @@ describe('Collection', () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       autoCommit: false,
     });
@@ -1353,11 +1353,11 @@ describe('Collection', () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'A', meta: { count: 1 } },
       autoCommit: false,
     });
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'B', meta: { count: 2 } },
       autoCommit: false,
     });
@@ -1378,7 +1378,7 @@ describe('Collection', () => {
 
   it('restores a clean collection when load is called with no storage', async () => {
     const collection = new Collection<TestEntity>();
-    collection.upsert({
+    collection.create({
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
     });
 
@@ -1397,7 +1397,7 @@ describe('Collection', () => {
 
     const collection = new Collection<TestEntity>({ storage });
     await collection.load();
-    collection.upsert({
+    collection.create({
       entity: { id: 'two', name: 'New', meta: { count: 2 } },
       autoCommit: false,
     });
