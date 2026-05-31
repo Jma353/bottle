@@ -32,7 +32,7 @@ function formatPostChange(c: ItemChange<Post>): string {
     return `insert ${c.id}: ${formatPost(c.entity)}`;
   }
   if (c.type === 'update') {
-    return `update ${c.id}: ${formatPost(c.oldEntity!)} -> ${formatPost(c.entity)}"`;
+    return `update ${c.id}: ${formatPost(c.oldEntity!)} -> ${formatPost(c.entity)}`;
   }
   return `delete ${c.id}: ${formatPost(c.entity)}`;
 }

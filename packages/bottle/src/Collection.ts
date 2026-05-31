@@ -34,7 +34,6 @@ export class Collection<T extends Entity> {
       delete: action.bound,
       update: action.bound,
       ingest: action.bound,
-      snapshot: action.bound,
       commit: action.bound,
       rollback: action.bound,
     });

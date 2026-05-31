@@ -1,4 +1,5 @@
 import { describe, expect, it } from '@rstest/core';
+import { autorun } from 'mobx';
 
 import { Collection } from './Collection';
 import type { ItemChange } from './types';
@@ -891,5 +892,40 @@ describe('Collection', () => {
       meta: { count: 2 },
     });
     expect(snap.isDraft).toBe(false);
+  });
+
+  it('reactively notifies observers when snapshot draft status changes', async () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+
+    const snaps: { isDraft: boolean; original: unknown; current: unknown }[] =
+      [];
+    const stop = autorun(() => {
+      const snap = collection.snapshot('one');
+      snaps.push({
+        isDraft: snap.isDraft,
+        original: snap.original,
+        current: snap.current,
+      });
+    });
+
+    expect(snaps.length).toBe(1);
+    expect(snaps.at(0)?.isDraft).toBe(true);
+
+    await collection.commit({ id: 'one', sync: noopSync });
+
+    expect(snaps.length).toBe(3);
+    expect(snaps.at(1)?.isDraft).toBe(false);
+    expect(snaps.at(2)?.isDraft).toBe(false);
+
+    stop();
   });
 });
