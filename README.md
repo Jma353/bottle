@@ -124,3 +124,29 @@ posts.rollback({ id: 'post-2' });
 ```
 
 Draft changes for the same entity fold into one active mutation. Later changes made while a previous mutation is already pending create a separate mutation.
+
+### Offline storage
+
+Pass a `Storage` backend to the constructor to persist entities, snapshots, and mutations across page reloads. Call `load` once before using the collection to hydrate from storage.
+
+```ts
+import { Collection, LocalStorage } from 'bottle';
+
+const posts = new Collection<Post>({
+  storage: new LocalStorage({ keyPrefix: 'posts' }),
+});
+
+await posts.load();
+```
+
+`LocalStorage` writes to the browser's `localStorage` API and falls back to an in-memory map when unavailable. `IndexedDBStorage` writes to `IndexedDB` and is better suited for larger datasets:
+
+```ts
+import { IndexedDBStorage } from 'bottle';
+
+const posts = new Collection<Post>({
+  storage: new IndexedDBStorage({ dbName: 'posts' }),
+});
+```
+
+When storage is attached, draft and pending mutations are restored automatically on `load`, so users can continue editing where they left off. You can also build a custom backend by implementing the `Storage` interface.
