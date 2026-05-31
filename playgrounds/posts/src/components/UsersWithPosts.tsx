@@ -148,7 +148,7 @@ function UsersWithPostsInner(props: Props) {
 
                   return (
                     <PostCard key={post.id}>
-                      {isEditingPost && !isDraft ? (
+                      {isEditingPost ? (
                         <>
                           <EditRow>
                             <StyledInput
@@ -203,6 +203,9 @@ function UsersWithPostsInner(props: Props) {
                             ))}
                           </ChangedFields>
                           <EditRow>
+                            <Button onClick={() => onStartEditPost(post)}>
+                              Edit Draft
+                            </Button>
                             <Button onClick={() => onCommitPost(post.id)}>
                               Save Draft
                             </Button>
