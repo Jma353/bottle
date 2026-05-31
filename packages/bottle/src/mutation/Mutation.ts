@@ -20,6 +20,11 @@ export class Mutation<T extends Entity> {
   status: MutationStatus = 'draft';
 
   /**
+   * The change this mutation represents, including type, entity, and prior state.
+   */
+  change: ItemChange<T>;
+
+  /**
    * Optional result returned from successfully committing the mutation.
    */
   result?: unknown;
@@ -28,8 +33,6 @@ export class Mutation<T extends Entity> {
    * Whether the mutation has been rolled back.
    */
   private rolledBack = false;
-
-  public change: ItemChange<T>;
 
   /**
    * Reverts the mutation's change from the collection when called.
@@ -42,33 +45,32 @@ export class Mutation<T extends Entity> {
   private readonly onSettled: () => void;
 
   /**
-   * Called when the mutation's commit fails.
+   * Called when the mutation is successfully committed.
    */
-  private readonly onError?: (error: Error) => void;
+  onCommit?: (change: ItemChange<T>) => void;
 
   /**
-   * Default executor used to commit the mutation when no override is provided.
+   * Called when the mutation's commit fails.
    */
-  private readonly defaultExecute?: ExecuteFunction<T>;
+  onError?: (error: Error) => void;
 
   constructor(args: {
     change: ItemChange<T>;
     rollbackChange: () => void;
     onSettled?: () => void;
+    onCommit?: (change: ItemChange<T>) => void;
     onError?: (error: Error) => void;
-    defaultExecute?: ExecuteFunction<T>;
     // Used when restoring a mutation from storage
     id?: string;
   }) {
-    const { change, rollbackChange, onSettled, onError, defaultExecute, id } =
-      args;
+    const { change, rollbackChange, onSettled, onCommit, onError, id } = args;
 
     this.id = id ?? crypto.randomUUID();
     this.change = change;
     this.rollbackChange = rollbackChange;
     this.onSettled = onSettled ?? (() => {});
+    this.onCommit = onCommit;
     this.onError = onError;
-    this.defaultExecute = defaultExecute;
 
     makeObservable(this, {
       id: observable,
@@ -139,6 +141,7 @@ export class Mutation<T extends Entity> {
 
     this.result = result;
     this.status = 'committed';
+    this.onCommit?.(this.change);
     this.onSettled();
   }
 
@@ -158,15 +161,13 @@ export class Mutation<T extends Entity> {
 
     this.markPending();
 
-    const actualExecutor = executor ?? this.defaultExecute;
-
-    if (!actualExecutor) {
+    if (!executor) {
       this.markCommitted();
       return;
     }
 
     try {
-      await actualExecutor(this.change);
+      await executor(this.change);
       this.markCommitted();
     } catch (err) {
       this.status = 'draft';

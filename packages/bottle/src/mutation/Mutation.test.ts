@@ -87,6 +87,26 @@ describe('Mutation', () => {
     }).toThrow('Cannot rollback a committed mutation');
   });
 
+  it('calls onCommit when marked committed', () => {
+    let committed = false;
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original' },
+      },
+      rollbackChange: () => {},
+      onCommit: () => {
+        committed = true;
+      },
+    });
+
+    mutation.markPending();
+    mutation.markCommitted();
+
+    expect(committed).toBe(true);
+  });
+
   it('can be marked pending and committed without a transport executor', () => {
     const mutation = new Mutation<TestEntity>({
       change: {

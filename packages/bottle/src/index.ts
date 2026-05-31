@@ -3,6 +3,7 @@ export { Collection } from './Collection';
 export { MutationManager } from './mutation/MutationManager';
 export { LocalStorage } from './storage/LocalStorage';
 export { IndexedDBStorage } from './storage/IndexedDBStorage';
+export { neverReached } from './utils/neverReached';
 export type { EntitySnapshots } from './Collection';
 export type { Entity, ChangeType, ItemChange, ChangeHandler } from './types';
 export type { MutationStatus } from './mutation/types';

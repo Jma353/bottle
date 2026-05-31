@@ -158,7 +158,9 @@ describe('Collection', () => {
   });
 
   it('folds draft insert updates into one active mutation', async () => {
-    const collection = new Collection<TestEntity>();
+    const collection = new Collection<TestEntity>({
+      create: noopSync,
+    });
 
     collection.upsert({
       entity: {
@@ -214,7 +216,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    await collection.commit({ id: 'one', sync: noopSync });
+    await collection.commit({ id: 'one' });
 
     collection.upsert({
       entity: {
@@ -266,7 +268,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    await collection.commit({ id: 'one', sync: noopSync });
+    await collection.commit({ id: 'one' });
 
     collection.upsert({
       entity: {
@@ -304,7 +306,14 @@ describe('Collection', () => {
   });
 
   it('preserves pending mutations when an entity receives later updates', async () => {
-    const collection = new Collection<TestEntity>();
+    let resolvePending: () => void = () => {};
+    let pendingCommit = Promise.resolve();
+    const collection = new Collection<TestEntity>({
+      create: noopSync,
+      update: async () => {
+        await pendingCommit;
+      },
+    });
     collection.upsert({
       entity: {
         id: 'one',
@@ -313,12 +322,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    await collection.commit({ id: 'one', sync: noopSync });
-
-    let resolvePending: () => void = () => {};
-    const pendingCommit = new Promise<void>(resolve => {
-      resolvePending = resolve;
-    });
+    await collection.commit({ id: 'one' });
 
     collection.upsert({
       entity: {
@@ -328,10 +332,10 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    const pendingResult = collection.commit({
-      id: 'one',
-      sync: async () => pendingCommit,
+    pendingCommit = new Promise<void>(resolve => {
+      resolvePending = resolve;
     });
+    const pendingResult = collection.commit({ id: 'one' });
 
     collection.upsert({
       entity: {
@@ -423,7 +427,9 @@ describe('Collection', () => {
   });
 
   it('rolls back collection mutations before commit', async () => {
-    const collection = new Collection<TestEntity>();
+    const collection = new Collection<TestEntity>({
+      create: noopSync,
+    });
 
     collection.upsert({
       entity: {
@@ -445,7 +451,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    await collection.commit({ id: 'one', sync: noopSync });
+    await collection.commit({ id: 'one' });
 
     collection.upsert({
       entity: {
@@ -543,7 +549,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    collection.commit({ id: 'one', sync: noopSync });
+    collection.commit({ id: 'one' });
 
     collection.upsert({
       entity: {
@@ -589,7 +595,11 @@ describe('Collection', () => {
   });
 
   it('commits and removes mutation on failure', async () => {
-    const collection = new Collection<TestEntity>();
+    const collection = new Collection<TestEntity>({
+      create: async () => {
+        throw new Error('save failed');
+      },
+    });
 
     collection.upsert({
       entity: {
@@ -602,12 +612,7 @@ describe('Collection', () => {
 
     let thrown: Error | undefined;
     try {
-      await collection.commit({
-        id: 'one',
-        sync: async () => {
-          throw new Error('save failed');
-        },
-      });
+      await collection.commit({ id: 'one' });
     } catch (err) {
       thrown = err instanceof Error ? err : new Error(String(err));
     }
@@ -674,7 +679,9 @@ describe('Collection', () => {
   });
 
   it('updates snapshot original when ingesting during an active mutation', () => {
-    const collection = new Collection<TestEntity>();
+    const collection = new Collection<TestEntity>({
+      create: noopSync,
+    });
 
     collection.upsert({
       entity: {
@@ -722,17 +729,18 @@ describe('Collection', () => {
   });
 
   it('discards a pending insert mutation when the entity is ingested', async () => {
-    const collection = new Collection<TestEntity>();
-
     const syncPromise = new Promise<void>(() => {});
+    const collection = new Collection<TestEntity>({
+      create: async () => {
+        await syncPromise;
+      },
+    });
+
     collection.upsert({
       entity: {
         id: 'one',
         name: 'Pending',
         meta: { count: 1 },
-      },
-      sync: async () => {
-        await syncPromise;
       },
     });
 
@@ -764,7 +772,9 @@ describe('Collection', () => {
   });
 
   it('updates original snapshot when ingesting during a draft update mutation', async () => {
-    const collection = new Collection<TestEntity>();
+    const collection = new Collection<TestEntity>({
+      create: noopSync,
+    });
 
     collection.upsert({
       entity: {
@@ -772,7 +782,6 @@ describe('Collection', () => {
         name: 'Original',
         meta: { count: 1 },
       },
-      sync: noopSync,
     });
 
     collection.upsert({
@@ -907,7 +916,6 @@ describe('Collection', () => {
     };
     collection.upsert({
       entity,
-      sync: async () => {},
       autoCommit: true,
     });
 
@@ -922,15 +930,16 @@ describe('Collection', () => {
   });
 
   it('stores auto-commit errors and removes mutation on failure', async () => {
-    const collection = new Collection<TestEntity>();
+    const collection = new Collection<TestEntity>({
+      create: async () => {
+        throw new Error('sync failed');
+      },
+    });
     collection.upsert({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
-      },
-      sync: async () => {
-        throw new Error('sync failed');
       },
       autoCommit: true,
     });
@@ -944,15 +953,16 @@ describe('Collection', () => {
     });
 
     expect(() => {
-      collection.commit({
-        id: 'one',
-        sync: async () => {},
-      });
+      collection.commit({ id: 'one' });
     }).toThrow("No active mutation for entity 'one'");
   });
 
   it('calls onError when auto-commit fails', async () => {
-    const collection = new Collection<TestEntity>();
+    const collection = new Collection<TestEntity>({
+      create: async () => {
+        throw new Error('sync failed');
+      },
+    });
     let receivedError: Error | undefined;
 
     collection.upsert({
@@ -960,9 +970,6 @@ describe('Collection', () => {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
-      },
-      sync: async () => {
-        throw new Error('sync failed');
       },
       onError: (error: Error) => {
         receivedError = error;
@@ -986,7 +993,7 @@ describe('Collection', () => {
       },
       autoCommit: false,
     });
-    await collection.commit({ id: 'one', sync: noopSync });
+    await collection.commit({ id: 'one' });
 
     collection.upsert({
       entity: {
@@ -997,7 +1004,7 @@ describe('Collection', () => {
       autoCommit: false,
     });
 
-    await collection.commit({ id: 'one', sync: noopSync });
+    await collection.commit({ id: 'one' });
 
     const snap = collection.snapshot('one');
     expect(snap.original).toBeUndefined();
@@ -1058,12 +1065,7 @@ describe('Collection', () => {
     });
 
     try {
-      await collection.commit({
-        id: 'one',
-        sync: async () => {
-          throw new Error('sync failed');
-        },
-      });
+      await collection.commit({ id: 'one' });
     } catch {
       // expected
     }
@@ -1079,7 +1081,9 @@ describe('Collection', () => {
   });
 
   it('reactively notifies observers when snapshot draft status changes', async () => {
-    const collection = new Collection<TestEntity>();
+    const collection = new Collection<TestEntity>({
+      create: noopSync,
+    });
 
     collection.upsert({
       entity: {
@@ -1104,7 +1108,7 @@ describe('Collection', () => {
     expect(snaps.length).toBe(1);
     expect(snaps.at(0)?.isDraft).toBe(true);
 
-    await collection.commit({ id: 'one', sync: noopSync });
+    await collection.commit({ id: 'one' });
 
     expect(snaps.length).toBe(3);
     expect(snaps.at(1)?.isDraft).toBe(false);
@@ -1303,7 +1307,7 @@ describe('Collection', () => {
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       autoCommit: false,
     });
-    await collection.commit({ id: 'one', sync: noopSync });
+    await collection.commit({ id: 'one' });
 
     const stored = await storage.getAll();
     expect(stored.mutations).toEqual([]);
@@ -1335,12 +1339,7 @@ describe('Collection', () => {
     });
 
     try {
-      await collection.commit({
-        id: 'one',
-        sync: async () => {
-          throw new Error('sync failed');
-        },
-      });
+      await collection.commit({ id: 'one' });
     } catch {
       // expected
     }

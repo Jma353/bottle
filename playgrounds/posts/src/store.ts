@@ -18,9 +18,65 @@ const API_BASE = '/api';
 class Store {
   users = new Collection<User>({
     storage: new IndexedDBStorage<User>({ dbName: 'playground-users' }),
+    create: async changes => {
+      const res = await fetch(`${API_BASE}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes.entity),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to create user');
+      }
+    },
+    update: async changes => {
+      const res = await fetch(`${API_BASE}/users/${changes.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes.entity),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to update user');
+      }
+    },
+    delete: async changes => {
+      const res = await fetch(`${API_BASE}/users/${changes.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        throw new Error('Failed to delete user');
+      }
+    },
   });
   posts = new Collection<Post>({
     storage: new IndexedDBStorage<Post>({ dbName: 'playground-posts' }),
+    create: async changes => {
+      const res = await fetch(`${API_BASE}/posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes.entity),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to create post');
+      }
+    },
+    update: async changes => {
+      const res = await fetch(`${API_BASE}/posts/${changes.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes.entity),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to update post');
+      }
+    },
+    delete: async changes => {
+      const res = await fetch(`${API_BASE}/posts/${changes.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        throw new Error('Failed to delete post');
+      }
+    },
   });
 
   constructor() {
@@ -59,16 +115,6 @@ class Store {
     const id = `u-${Date.now()}`;
     this.users.upsert({
       entity: { id, name, age },
-      sync: async changes => {
-        const res = await fetch(`${API_BASE}/users`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(changes.entity),
-        });
-        if (!res.ok) {
-          throw new Error('Failed to create user');
-        }
-      },
       autoCommit: true,
     });
   }
@@ -78,16 +124,6 @@ class Store {
     this.users.update({
       id,
       patch: { name, age },
-      sync: async changes => {
-        const res = await fetch(`${API_BASE}/users/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(changes.entity),
-        });
-        if (!res.ok) {
-          throw new Error('Failed to update user');
-        }
-      },
       autoCommit: true,
     });
   }
@@ -96,14 +132,6 @@ class Store {
     const { id } = args;
     this.users.delete({
       id,
-      sync: async () => {
-        const res = await fetch(`${API_BASE}/users/${id}`, {
-          method: 'DELETE',
-        });
-        if (!res.ok) {
-          throw new Error('Failed to delete user');
-        }
-      },
       autoCommit: true,
     });
   }
@@ -113,16 +141,6 @@ class Store {
     const id = `p-${Date.now()}`;
     this.posts.upsert({
       entity: { id, title, authorId },
-      sync: async changes => {
-        const res = await fetch(`${API_BASE}/posts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(changes.entity),
-        });
-        if (!res.ok) {
-          throw new Error('Failed to create post');
-        }
-      },
       autoCommit: false,
     });
   }
@@ -132,16 +150,6 @@ class Store {
     this.posts.update({
       id,
       patch: { title, authorId },
-      sync: async changes => {
-        const res = await fetch(`${API_BASE}/posts/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(changes.entity),
-        });
-        if (!res.ok) {
-          throw new Error('Failed to update post');
-        }
-      },
       autoCommit: false,
     });
   }
@@ -150,14 +158,6 @@ class Store {
     const { id } = args;
     this.posts.delete({
       id,
-      sync: async () => {
-        const res = await fetch(`${API_BASE}/posts/${id}`, {
-          method: 'DELETE',
-        });
-        if (!res.ok) {
-          throw new Error('Failed to delete post');
-        }
-      },
       autoCommit: true,
     });
   }

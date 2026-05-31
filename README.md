@@ -18,22 +18,34 @@ pnpm add bottle
 
 ### Writing data
 
-`upsert` inserts or replaces one entity. `delete` removes an entity by id. Both apply optimistically and can sync to a server automatically.
+`upsert` inserts or replaces one entity. `delete` removes an entity by id. Both apply optimistically and can sync to a server automatically when the collection is configured with `create`, `update`, and `delete` callbacks.
 
 ```ts
 import { Collection } from 'bottle';
 
 type Post = { id: string; title: string; published: boolean };
-const posts = new Collection<Post>();
-
-posts.upsert({
-  entity: { id: 'post-1', title: 'Hello', published: false },
-  sync: async change => {
+const posts = new Collection<Post>({
+  create: async change => {
     await fetch('/api/posts', {
       method: 'POST',
       body: JSON.stringify(change.entity),
     });
   },
+  update: async change => {
+    await fetch(`/api/posts/${change.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(change.entity),
+    });
+  },
+  delete: async change => {
+    await fetch(`/api/posts/${change.id}`, {
+      method: 'DELETE',
+    });
+  },
+});
+
+posts.upsert({
+  entity: { id: 'post-1', title: 'Hello', published: false },
 });
 
 posts.delete({ id: 'post-1' });
@@ -45,12 +57,6 @@ posts.delete({ id: 'post-1' });
 posts.update({
   id: 'post-1',
   patch: { published: true },
-  sync: async change => {
-    await fetch(`/api/posts/${change.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(change.entity),
-    });
-  },
 });
 ```
 
@@ -92,7 +98,7 @@ for (const id of deletedPostIds) {
 
 ### Drafts and pending mutations
 
-By default, `upsert`, `update`, and `delete` auto-commit. Pass `autoCommit: false` to queue the change instead. Each accepts an optional `onError` callback for handling sync failures.
+By default, `upsert`, `update`, and `delete` auto-commit. Pass `autoCommit: false` to queue the change instead. Each accepts optional `onCommit` and `onError` callbacks.
 
 ```ts
 posts.upsert({
@@ -100,15 +106,7 @@ posts.upsert({
   autoCommit: false,
 });
 
-await posts.commit({
-  id: 'post-2',
-  sync: async change => {
-    await fetch('/api/posts', {
-      method: 'POST',
-      body: JSON.stringify(change.entity),
-    });
-  },
-});
+await posts.commit({ id: 'post-2' });
 ```
 
 Use `snapshot` to inspect the original and current state of an entity while a mutation is pending:

@@ -8,8 +8,11 @@ import type { EntitySnapshots } from './mutation/MutationManager';
 import type { Storage } from './storage/Storage';
 import type { Entity, ItemChange, ChangeHandler, DeepReadonly } from './types';
 import { deepFreeze } from './utils/deepFreeze';
+import { neverReached } from './utils/neverReached';
 
 export type { EntitySnapshots };
+
+type SyncFunction<T extends Entity> = (change: ItemChange<T>) => Promise<void>;
 
 export class Collection<T extends Entity> {
   /**
@@ -32,9 +35,32 @@ export class Collection<T extends Entity> {
    */
   protected storage?: Storage<T>;
 
-  constructor(args?: { storage?: Storage<T> }) {
-    const { storage } = args ?? {};
+  /**
+   * Optional callback for persisting insert operations to a remote source.
+   */
+  protected createCallback?: SyncFunction<T>;
+
+  /**
+   * Optional callback for persisting update operations to a remote source.
+   */
+  protected updateCallback?: SyncFunction<T>;
+
+  /**
+   * Optional callback for persisting delete operations to a remote source.
+   */
+  protected deleteCallback?: SyncFunction<T>;
+
+  constructor(args?: {
+    storage?: Storage<T>;
+    create?: SyncFunction<T>;
+    update?: SyncFunction<T>;
+    delete?: SyncFunction<T>;
+  }) {
+    const { storage, create, update, delete: del } = args ?? {};
     this.storage = storage;
+    this.createCallback = create;
+    this.updateCallback = update;
+    this.deleteCallback = del;
     this.mutationManager = new MutationManager<T>({ storage });
 
     makeObservable(this, {
@@ -154,18 +180,19 @@ export class Collection<T extends Entity> {
    */
   upsert(args: {
     entity: T;
-    sync?: (change: ItemChange<T>) => Promise<void>;
+    onCommit?: (change: ItemChange<T>) => void;
     onError?: (error: Error) => void;
     autoCommit?: boolean;
   }): void {
-    const { entity, sync, onError, autoCommit = true } = args;
+    const { entity, onCommit, onError, autoCommit = true } = args;
     const change = this.applyUpsert(entity);
     if (!change) {
       return;
     }
-    const mutation = this.createMutation({ change, sync, onError });
+    const mutation = this.createMutation({ change, onCommit, onError });
     if (autoCommit) {
-      mutation.commit(sync).catch(() => {});
+      const executor = this.resolveExecutor(mutation.change);
+      mutation.commit(executor).catch(() => {});
     }
   }
 
@@ -175,14 +202,14 @@ export class Collection<T extends Entity> {
   update(args: {
     id: string;
     patch: Partial<Omit<T, 'id'>>;
-    sync?: (change: ItemChange<T>) => Promise<void>;
+    onCommit?: (change: ItemChange<T>) => void;
     onError?: (error: Error) => void;
     autoCommit?: boolean;
   }): void {
-    const { id, patch, sync, onError, autoCommit = true } = args;
+    const { id, patch, onCommit, onError, autoCommit = true } = args;
     const existing = this.get(id);
     const updated = { ...(existing as T), ...patch, id };
-    this.upsert({ entity: updated, sync, onError, autoCommit });
+    this.upsert({ entity: updated, onCommit, onError, autoCommit });
   }
 
   /**
@@ -190,18 +217,19 @@ export class Collection<T extends Entity> {
    */
   delete(args: {
     id: string;
-    sync?: (change: ItemChange<T>) => Promise<void>;
+    onCommit?: (change: ItemChange<T>) => void;
     onError?: (error: Error) => void;
     autoCommit?: boolean;
   }): void {
-    const { id, sync, onError, autoCommit = true } = args;
+    const { id, onCommit, onError, autoCommit = true } = args;
     const change = this.applyDelete(id);
     if (!change) {
       return;
     }
-    const mutation = this.createMutation({ change, sync, onError });
+    const mutation = this.createMutation({ change, onCommit, onError });
     if (autoCommit) {
-      mutation.commit(sync).catch(() => {});
+      const executor = this.resolveExecutor(mutation.change);
+      mutation.commit(executor).catch(() => {});
     }
   }
 
@@ -227,16 +255,14 @@ export class Collection<T extends Entity> {
   /**
    * Commits the active mutation for the given entity id.
    */
-  commit(args: {
-    id: string;
-    sync?: (change: ItemChange<T>) => Promise<void>;
-  }): Promise<void> {
-    const { id, sync } = args;
+  commit(args: { id: string }): Promise<void> {
+    const { id } = args;
     const mutation = this.mutationManager.getActiveMutation(id);
     if (!mutation) {
       throw new Error(`No active mutation for entity '${id}'`);
     }
-    return mutation.commit(sync);
+    const executor = this.resolveExecutor(mutation.change);
+    return mutation.commit(executor);
   }
 
   /**
@@ -359,17 +385,36 @@ export class Collection<T extends Entity> {
     return change;
   }
 
+  private resolveExecutor(change: ItemChange<T>): SyncFunction<T> | undefined {
+    switch (change.type) {
+      case 'insert': {
+        return this.createCallback;
+      }
+      case 'update': {
+        return this.updateCallback;
+      }
+      case 'delete': {
+        return this.deleteCallback;
+      }
+      default: {
+        neverReached(change.type);
+      }
+    }
+  }
+
   private createMutation(args: {
     change: ItemChange<T>;
-    sync?: (change: ItemChange<T>) => Promise<void>;
+    onCommit?: (change: ItemChange<T>) => void;
     onError?: (error: Error) => void;
   }): Mutation<T> {
-    const { change, sync, onError } = args;
+    const { change, onCommit, onError } = args;
     const activeMutation = this.mutationManager.getActiveMutation(change.id);
     if (activeMutation && activeMutation.status === 'draft') {
       return this.foldMutation({
         mutation: activeMutation,
         change,
+        onCommit,
+        onError,
       });
     }
 
@@ -386,8 +431,8 @@ export class Collection<T extends Entity> {
           mutationId: mutation.id,
         });
       },
+      onCommit,
       onError,
-      defaultExecute: sync,
     });
     this.mutationManager.setActiveMutation(mutation);
 
@@ -397,8 +442,10 @@ export class Collection<T extends Entity> {
   private foldMutation(args: {
     mutation: Mutation<T>;
     change: ItemChange<T>;
+    onCommit?: (change: ItemChange<T>) => void;
+    onError?: (error: Error) => void;
   }): Mutation<T> {
-    const { mutation, change } = args;
+    const { mutation, change, onCommit, onError } = args;
     const previousChange = mutation.change;
     const foldedChange = foldChange({
       previousChange,
@@ -421,6 +468,13 @@ export class Collection<T extends Entity> {
 
     mutation.updateChange({ change: foldedChange });
     this.mutationManager.setPendingSnapshot(mutation);
+
+    if (onCommit !== undefined) {
+      mutation.onCommit = onCommit;
+    }
+    if (onError !== undefined) {
+      mutation.onError = onError;
+    }
 
     return mutation;
   }
