@@ -714,6 +714,67 @@ describe('Collection', () => {
     expect(snap.isDraft).toBe(false);
   });
 
+  it('updates original snapshot when ingesting during a draft update mutation', async () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      sync: noopSync,
+    });
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Pending',
+        meta: { count: 2 },
+      },
+      autoCommit: false,
+    });
+
+    let snap = collection.snapshot('one');
+    expect(snap.original).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Pending',
+      meta: { count: 2 },
+    });
+    expect(snap.isDraft).toBe(true);
+
+    collection.ingest({
+      entity: {
+        id: 'one',
+        name: 'External',
+        meta: { count: 3 },
+      },
+    });
+
+    snap = collection.snapshot('one');
+    expect(snap.original).toEqual({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Pending',
+      meta: { count: 2 },
+    });
+    expect(snap.isDraft).toBe(true);
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+  });
+
   it('auto-commits mutations when autoCommit is true', async () => {
     const collection = new Collection<TestEntity>();
     const entity = {
