@@ -2,44 +2,44 @@ import { Field } from '@base-ui/react/field';
 import styled from 'styled-components';
 
 export const Panel = styled.div`
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
 `;
 
 export const FieldRoot = styled(Field.Root)`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: var(--space-1);
+  margin-bottom: var(--space-5);
 `;
 
 export const FieldLabel = styled(Field.Label)`
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
 `;
 
 export const Input = styled.input`
-  padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
 `;
 
 export const Button = styled.button`
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: white;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-300);
+  background: var(--color-white);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 
   &:hover {
-    background: #f9fafb;
+    background: var(--color-gray-50);
   }
 `;
 
 export const Empty = styled.div`
-  font-size: 14px;
-  color: #6b7280;
+  font-size: var(--font-size-base);
+  color: var(--color-gray-500);
 `;

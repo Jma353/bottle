@@ -27,23 +27,23 @@ export function ChangeLog(props: Props) {
 }
 
 const Title = styled.h3`
-  margin: 0 0 12px;
-  font-size: 16px;
+  margin: 0 0 var(--space-5);
+  font-size: var(--font-size-lg);
 `;
 
 const List = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
   max-height: 200px;
   overflow-y: auto;
 `;
 
 const Entry = styled.div`
-  font-size: 13px;
-  font-family: ui-monospace, monospace;
-  color: #374151;
-  padding: 4px 8px;
-  background: #f9fafb;
-  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  color: var(--color-gray-700);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-sm);
 `;

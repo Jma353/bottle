@@ -197,7 +197,7 @@ function UsersWithPostsInner(props: Props) {
                                     <span
                                       style={{
                                         textDecoration: 'line-through',
-                                        color: '#9ca3af',
+                                        color: 'var(--color-gray-400)',
                                       }}
                                     >
                                       {field.oldValue}
@@ -256,8 +256,8 @@ function UsersWithPostsInner(props: Props) {
 export const UsersWithPosts = observer(UsersWithPostsInner);
 
 const UserEntry = styled.div`
-  padding: 8px 0;
-  border-bottom: 1px solid #f3f4f6;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-gray-100);
 
   &:last-child {
     border-bottom: none;
@@ -268,85 +268,85 @@ const UserHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-3);
 `;
 
 const UserName = styled.div`
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--font-size-md);
 `;
 
 const EditRow = styled.div`
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
 `;
 
 const PostsGrid = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
-  padding-left: 8px;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  padding-left: var(--space-3);
 `;
 
 const PostCard = styled.div`
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px;
-  background: #ffffff;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  background: var(--color-white);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-3);
 `;
 
 const PostCardHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-3);
 `;
 
 const PostTitle = styled.div`
   font-weight: 600;
-  font-size: 15px;
-  color: #111827;
+  font-size: var(--font-size-md);
+  color: var(--color-gray-900);
 `;
 
 const PostMeta = styled.div`
-  font-size: 13px;
-  color: #6b7280;
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
 `;
 
 const DraftBadge = styled.span`
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: #fef3c7;
-  color: #92400e;
-  font-size: 12px;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-xl);
+  background: var(--color-amber-100);
+  color: var(--color-amber-800);
+  font-size: var(--font-size-xs);
   font-weight: 500;
 `;
 
 const ChangedFields = styled.div`
-  padding: 8px;
-  background: #f9fafb;
-  border-radius: 6px;
-  font-size: 13px;
+  padding: var(--space-3);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
 `;
 
 const ChangedFieldsTitle = styled.div`
   font-weight: 600;
-  margin-bottom: 4px;
-  color: #374151;
+  margin-bottom: var(--space-1);
+  color: var(--color-gray-700);
 `;
 
 const ChangedFieldItem = styled.div`
-  color: #4b5563;
+  color: var(--color-gray-600);
   line-height: 1.5;
 `;

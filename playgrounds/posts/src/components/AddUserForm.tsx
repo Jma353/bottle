@@ -39,14 +39,14 @@ export function AddUserForm(props: Props) {
 }
 
 const StyledButton = styled(Button)`
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #d1d5db;
-  background: white;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-300);
+  background: var(--color-white);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 
   &:hover {
-    background: #f9fafb;
+    background: var(--color-gray-50);
   }
 `;

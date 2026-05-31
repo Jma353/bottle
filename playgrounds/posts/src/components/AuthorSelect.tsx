@@ -69,13 +69,13 @@ const SelectTrigger = styled(Select.Trigger)`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: white;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-family: var(--font-sans);
+  background: var(--color-white);
   cursor: pointer;
   width: 100%;
   text-align: left;
@@ -85,7 +85,7 @@ const SelectIcon = styled(Select.Icon)`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--color-gray-500);
 `;
 
 const SelectPositioner = styled(Select.Positioner)`
@@ -93,13 +93,13 @@ const SelectPositioner = styled(Select.Positioner)`
 `;
 
 const SelectPopup = styled(Select.Popup)`
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   outline: none;
   min-width: var(--anchor-width);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
 `;
 
 const SelectList = styled(Select.List)`
@@ -109,18 +109,18 @@ const SelectList = styled(Select.List)`
 `;
 
 const SelectItem = styled(Select.Item)`
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-family: system-ui, -apple-system, sans-serif;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  font-family: var(--font-sans);
   cursor: pointer;
 
   &[data-highlighted] {
-    background: #f3f4f6;
+    background: var(--color-gray-100);
   }
 
   &[data-selected] {
-    background: #e5e7eb;
+    background: var(--color-gray-200);
   }
 `;
 

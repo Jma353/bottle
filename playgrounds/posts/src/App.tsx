@@ -221,23 +221,20 @@ export const App = observer(AppInner);
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px;
+  gap: var(--space-7);
+  padding: var(--space-7);
   max-width: 960px;
   margin: 0 auto;
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: var(--font-sans);
 `;
 
 const Row = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: var(--space-7);
 `;
 
 const Title = styled.h2`
-  margin: 0 0 16px;
-  font-size: 18px;
+  margin: 0 0 var(--space-6);
+  font-size: var(--font-size-xl);
 `;
