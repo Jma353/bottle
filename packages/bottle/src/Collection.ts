@@ -123,6 +123,18 @@ export class Collection<T extends Entity> {
         current: snapshot.current ? snapshot.current : undefined,
         mutationId: snapshot.mutationId,
       });
+
+      // Reconcile the live item with the snapshot's current value. This
+      // is necessary because external code may have overwritten the stored
+      // entity (e.g. via ingest while mutations were not yet restored).
+      const mutation = this.mutationManager.getActiveMutation(snapshot.id);
+      if (mutation && mutation.status === 'draft') {
+        if (snapshot.current !== undefined) {
+          this.items.set(snapshot.id, deepFreeze(snapshot.current) as T);
+        } else {
+          this.items.delete(snapshot.id);
+        }
+      }
     }
   }
 
@@ -283,23 +295,30 @@ export class Collection<T extends Entity> {
   ingest(args: { entity: T }): DeepReadonly<T> {
     const { entity } = args;
     const frozen = deepFreeze<T>(entity);
-    this.items.set(entity.id, frozen);
-
-    this.storage?.setEntity(frozen);
 
     const mutation = this.mutationManager.getActiveMutation(entity.id);
     if (mutation) {
       if (mutation.change.type === 'create') {
+        // External source has this entity, so we can commit the optimistic
+        // creation and replace the local item with the external version.
+        this.items.set(entity.id, frozen);
         this.mutationManager.removeActiveMutation({
           id: entity.id,
           mutationId: mutation.id,
         });
+        this.storage?.setEntity(frozen);
       } else {
+        // For active updates or deletes, the external data represents the
+        // new ground truth (original snapshot). We must not overwrite the
+        // local draft item, otherwise pending changes would be lost.
         this.mutationManager.setOriginalSnapshot({
           id: entity.id,
           original: frozen as DeepReadonly<T>,
         });
       }
+    } else {
+      this.items.set(entity.id, frozen);
+      this.storage?.setEntity(frozen);
     }
 
     // Intentionally no emit() in here

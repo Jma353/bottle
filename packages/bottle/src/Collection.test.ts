@@ -828,8 +828,8 @@ describe('Collection', () => {
     expect(snap.isDraft).toBe(true);
     expect(collection.get('one')).toEqual({
       id: 'one',
-      name: 'External',
-      meta: { count: 3 },
+      name: 'Pending',
+      meta: { count: 2 },
     });
   });
 
@@ -1181,13 +1181,48 @@ describe('Collection', () => {
     expect(snap.isDraft).toBe(true);
     expect(collection.get('one')).toEqual({
       id: 'one',
-      name: 'External',
-      meta: { count: 3 },
+      name: 'Updated',
+      meta: { count: 2 },
     });
 
     const stored = await storage.getAll();
     expect(stored.mutations.length).toBe(1);
     expect(stored.mutations[0]?.id).toBe('mut-1');
+  });
+
+  it('reconciles items with snapshot current when storage entity was overwritten', async () => {
+    const storage = new LocalStorage<TestEntity>();
+
+    await storage.setEntity({
+      id: 'one',
+      name: 'Corrupted',
+      meta: { count: 3 },
+    });
+    await storage.setMutation({
+      id: 'mut-1',
+      change: {
+        type: 'update',
+        id: 'one',
+        entity: { id: 'one', name: 'Updated', meta: { count: 2 } },
+        oldEntity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      },
+      status: 'draft',
+    });
+    await storage.setSnapshot({
+      id: 'one',
+      original: { id: 'one', name: 'Original', meta: { count: 1 } },
+      current: { id: 'one', name: 'Updated', meta: { count: 2 } },
+      mutationId: 'mut-1',
+    });
+
+    const collection = new Collection<TestEntity>({ storage });
+    await collection.load();
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Updated',
+      meta: { count: 2 },
+    });
   });
 
   it('does not duplicate stored mutations on repeated load', async () => {
