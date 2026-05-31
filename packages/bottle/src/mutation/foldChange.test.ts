@@ -5,7 +5,7 @@ import { foldChange } from './foldChange';
 describe('foldChange', () => {
   it('folds a delete over any previous change', () => {
     const previousChange = {
-      type: 'insert' as const,
+      type: 'create' as const,
       id: 'one',
       entity: { id: 'one', name: 'Original' },
     };
@@ -28,7 +28,7 @@ describe('foldChange', () => {
 
   it('folds an update over an insert into an insert', () => {
     const previousChange = {
-      type: 'insert' as const,
+      type: 'create' as const,
       id: 'one',
       entity: { id: 'one', name: 'Original' },
     };
@@ -42,7 +42,7 @@ describe('foldChange', () => {
     const result = foldChange({ previousChange, change });
 
     expect(result).toEqual({
-      type: 'insert',
+      type: 'create',
       id: 'one',
       entity: { id: 'one', name: 'Updated' },
     });
@@ -88,7 +88,7 @@ describe('foldChange', () => {
     const result = foldChange({ previousChange, change });
 
     expect(result).toEqual({
-      type: 'insert',
+      type: 'create',
       id: 'one',
       entity: { id: 'one', name: 'Resurrected' },
       oldEntity: undefined,

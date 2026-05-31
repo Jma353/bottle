@@ -89,7 +89,7 @@ describe('IndexedDBStorage', () => {
     await storage.setMutation({
       id: 'mut-1',
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'A' },
       },
@@ -101,7 +101,7 @@ describe('IndexedDBStorage', () => {
       {
         id: 'mut-1',
         change: {
-          type: 'insert',
+          type: 'create',
           id: 'one',
           entity: { id: 'one', name: 'A' },
         },
@@ -117,7 +117,7 @@ describe('IndexedDBStorage', () => {
     await storage.setMutation({
       id: 'mut-1',
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'A' },
       },
@@ -141,7 +141,7 @@ describe('IndexedDBStorage', () => {
     await storage.setMutation({
       id: 'mut-1',
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'A' },
       },

@@ -25,7 +25,7 @@ describe('MutationManager', () => {
     const manager = new MutationManager<TestEntity>();
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       },
@@ -94,7 +94,7 @@ describe('MutationManager', () => {
     const manager = new MutationManager<TestEntity>();
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       },
@@ -112,7 +112,7 @@ describe('MutationManager', () => {
     const manager = new MutationManager<TestEntity>();
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       },
@@ -130,7 +130,7 @@ describe('MutationManager', () => {
     const manager = new MutationManager<TestEntity>();
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       },
@@ -147,7 +147,7 @@ describe('MutationManager', () => {
     const manager = new MutationManager<TestEntity>({ storage });
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       },
@@ -168,7 +168,7 @@ describe('MutationManager', () => {
     const manager = new MutationManager<TestEntity>({ storage });
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       },
@@ -214,7 +214,7 @@ describe('MutationManager', () => {
     const manager = new MutationManager<TestEntity>();
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original', meta: { count: 1 } },
       },

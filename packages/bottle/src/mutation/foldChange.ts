@@ -19,9 +19,9 @@ export function foldChange<T extends Entity>(args: {
     };
   }
 
-  if (previousChange.type === 'insert') {
+  if (previousChange.type === 'create') {
     return {
-      type: 'insert',
+      type: 'create',
       id: change.id,
       entity: change.entity,
     };
@@ -29,7 +29,7 @@ export function foldChange<T extends Entity>(args: {
 
   if (previousChange.type === 'delete') {
     return {
-      type: originalEntity ? 'update' : 'insert',
+      type: originalEntity ? 'update' : 'create',
       id: change.id,
       entity: change.entity,
       oldEntity: originalEntity,

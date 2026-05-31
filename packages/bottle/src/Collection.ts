@@ -289,7 +289,7 @@ export class Collection<T extends Entity> {
 
     const mutation = this.mutationManager.getActiveMutation(entity.id);
     if (mutation) {
-      if (mutation.change.type === 'insert') {
+      if (mutation.change.type === 'create') {
         this.mutationManager.removeActiveMutation({
           id: entity.id,
           mutationId: mutation.id,
@@ -350,7 +350,7 @@ export class Collection<T extends Entity> {
       return undefined;
     }
     const change: ItemChange<T> = {
-      type: existing ? 'update' : 'insert',
+      type: existing ? 'update' : 'create',
       id: entity.id,
       entity: frozen as DeepReadonly<T>,
     };
@@ -387,7 +387,7 @@ export class Collection<T extends Entity> {
 
   private resolveExecutor(change: ItemChange<T>): SyncFunction<T> | undefined {
     switch (change.type) {
-      case 'insert': {
+      case 'create': {
         return this.createCallback;
       }
       case 'update': {
@@ -486,7 +486,7 @@ export class Collection<T extends Entity> {
       return;
     }
 
-    if (change.type === 'insert') {
+    if (change.type === 'create') {
       this.applyDelete(change.id);
       return;
     }

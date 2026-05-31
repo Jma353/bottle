@@ -77,7 +77,7 @@ describe('LocalStorage', () => {
     await storage.setMutation({
       id: 'mut-1',
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'A' },
       },
@@ -89,7 +89,7 @@ describe('LocalStorage', () => {
       {
         id: 'mut-1',
         change: {
-          type: 'insert',
+          type: 'create',
           id: 'one',
           entity: { id: 'one', name: 'A' },
         },
@@ -103,7 +103,7 @@ describe('LocalStorage', () => {
     await storage.setMutation({
       id: 'mut-1',
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'A' },
       },
@@ -127,7 +127,7 @@ describe('LocalStorage', () => {
     await storage.setMutation({
       id: 'mut-1',
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'A' },
       },

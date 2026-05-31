@@ -19,7 +19,7 @@ function formatPost(post: Post): string {
 }
 
 function formatUserChange(c: ItemChange<User>): string {
-  if (c.type === 'insert') {
+  if (c.type === 'create') {
     return `insert ${c.id}: ${formatUser(c.entity)}`;
   }
   if (c.type === 'update') {
@@ -29,7 +29,7 @@ function formatUserChange(c: ItemChange<User>): string {
 }
 
 function formatPostChange(c: ItemChange<Post>): string {
-  if (c.type === 'insert') {
+  if (c.type === 'create') {
     return `insert ${c.id}: ${formatPost(c.entity)}`;
   }
   if (c.type === 'update') {

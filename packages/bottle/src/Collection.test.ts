@@ -44,7 +44,7 @@ describe('Collection', () => {
     expect(Object.isFrozen(collection.all)).toBe(true);
     expect(receivedChanges).toEqual([
       {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: {
           id: 'one',

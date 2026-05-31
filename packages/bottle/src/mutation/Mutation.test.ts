@@ -13,7 +13,7 @@ describe('Mutation', () => {
     let errorReceived: Error | undefined;
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original' },
       },
@@ -48,7 +48,7 @@ describe('Mutation', () => {
     };
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original' },
       },
@@ -73,7 +73,7 @@ describe('Mutation', () => {
   it('rejects rollback after commit', async () => {
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original' },
       },
@@ -91,7 +91,7 @@ describe('Mutation', () => {
     let committed = false;
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original' },
       },
@@ -110,7 +110,7 @@ describe('Mutation', () => {
   it('can be marked pending and committed without a transport executor', () => {
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original' },
       },
@@ -130,7 +130,7 @@ describe('Mutation', () => {
   it('transitions status through commit', async () => {
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original' },
       },
@@ -149,7 +149,7 @@ describe('Mutation', () => {
   it('updates change while in draft status', () => {
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original' },
       },
@@ -158,7 +158,7 @@ describe('Mutation', () => {
 
     mutation.updateChange({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Updated' },
       },
@@ -170,7 +170,7 @@ describe('Mutation', () => {
   it('rejects change updates when not in draft', () => {
     const mutation = new Mutation<TestEntity>({
       change: {
-        type: 'insert',
+        type: 'create',
         id: 'one',
         entity: { id: 'one', name: 'Original' },
       },
@@ -182,7 +182,7 @@ describe('Mutation', () => {
     expect(() => {
       mutation.updateChange({
         change: {
-          type: 'insert',
+          type: 'create',
           id: 'one',
           entity: { id: 'one', name: 'Updated' },
         },

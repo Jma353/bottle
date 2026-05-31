@@ -10,7 +10,7 @@ export type Entity = {
  * Enumerates the kinds of mutations that can occur on an item in the store.
  * Used to categorize changes when broadcasting updates to subscribers.
  */
-export type ChangeType = 'insert' | 'update' | 'delete';
+export type ChangeType = 'create' | 'update' | 'delete';
 
 /**
  * Recursively marks a value and all nested values as readonly.
