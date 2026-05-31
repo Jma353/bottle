@@ -2,6 +2,7 @@ import { describe, expect, it } from '@rstest/core';
 import { autorun } from 'mobx';
 
 import { Collection } from './Collection';
+import { LocalStorage } from './storage/LocalStorage';
 import type { ItemChange } from './types';
 
 type TestEntity = {
@@ -1062,5 +1063,268 @@ describe('Collection', () => {
     expect(snaps.at(2)?.isDraft).toBe(false);
 
     stop();
+  });
+
+  it('hydrates entities from storage on load', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    await storage.setEntity({ id: 'one', name: 'Stored', meta: { count: 1 } });
+    await storage.setEntity({ id: 'two', name: 'Also', meta: { count: 2 } });
+
+    const collection = new Collection<TestEntity>({ storage });
+    await collection.load();
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Stored',
+      meta: { count: 1 },
+    });
+    expect(collection.get('two')).toEqual({
+      id: 'two',
+      name: 'Also',
+      meta: { count: 2 },
+    });
+  });
+
+  it('hydrates draft mutations and snapshots from storage', async () => {
+    const storage = new LocalStorage<TestEntity>();
+
+    const change: ItemChange<TestEntity> = {
+      type: 'update',
+      id: 'one',
+      entity: { id: 'one', name: 'Updated', meta: { count: 2 } },
+      oldEntity: { id: 'one', name: 'Original', meta: { count: 1 } },
+    };
+
+    await storage.setEntity({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+    await storage.setMutation({
+      id: 'mut-1',
+      change,
+      status: 'draft',
+    });
+    await storage.setSnapshot({
+      id: 'one',
+      original: { id: 'one', name: 'External', meta: { count: 3 } },
+      current: { id: 'one', name: 'Updated', meta: { count: 2 } },
+      mutationId: 'mut-1',
+    });
+
+    const collection = new Collection<TestEntity>({ storage });
+    await collection.load();
+
+    const snap = collection.snapshot('one');
+    expect(snap.original).toEqual({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Updated',
+      meta: { count: 2 },
+    });
+    expect(snap.isDraft).toBe(true);
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+  });
+
+  it('syncs upserts to storage', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.upsert({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+
+    const stored = await storage.getAll();
+    expect(stored.entities).toEqual([
+      { id: 'one', name: 'Original', meta: { count: 1 } },
+    ]);
+  });
+
+  it('syncs deletes to storage', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.upsert({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+    collection.delete({ id: 'one', autoCommit: false });
+
+    const stored = await storage.getAll();
+    expect(stored.entities).toEqual([]);
+  });
+
+  it('syncs ingest to storage', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.ingest({
+      entity: { id: 'one', name: 'External', meta: { count: 1 } },
+    });
+
+    const stored = await storage.getAll();
+    expect(stored.entities).toEqual([
+      { id: 'one', name: 'External', meta: { count: 1 } },
+    ]);
+  });
+
+  it('syncs remove to storage', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.ingest({
+      entity: { id: 'one', name: 'External', meta: { count: 1 } },
+    });
+    collection.remove({ id: 'one' });
+
+    const stored = await storage.getAll();
+    expect(stored.entities).toEqual([]);
+  });
+
+  it('syncs mutations and snapshots to storage', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.upsert({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+
+    const stored = await storage.getAll();
+    expect(stored.mutations.length).toBe(1);
+    expect(stored.mutations[0]?.status).toBe('draft');
+    expect(stored.snapshots.length).toBe(1);
+    expect(stored.snapshots[0]?.id).toBe('one');
+  });
+
+  it('removes mutation and snapshot from storage on commit', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.upsert({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'one', sync: noopSync });
+
+    const stored = await storage.getAll();
+    expect(stored.mutations).toEqual([]);
+    expect(stored.snapshots).toEqual([]);
+  });
+
+  it('removes mutation and snapshot from storage on rollback', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.upsert({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+    collection.rollback({ id: 'one' });
+
+    const stored = await storage.getAll();
+    expect(stored.mutations).toEqual([]);
+    expect(stored.snapshots).toEqual([]);
+  });
+
+  it('removes mutation and snapshot from storage on commit failure', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.upsert({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+
+    try {
+      await collection.commit({
+        id: 'one',
+        sync: async () => {
+          throw new Error('sync failed');
+        },
+      });
+    } catch {
+      // expected
+    }
+
+    const stored = await storage.getAll();
+    expect(stored.mutations).toEqual([]);
+    expect(stored.snapshots).toEqual([]);
+  });
+
+  it('updates stored mutation on fold', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const collection = new Collection<TestEntity>({ storage });
+
+    collection.upsert({
+      entity: { id: 'one', name: 'A', meta: { count: 1 } },
+      autoCommit: false,
+    });
+    collection.upsert({
+      entity: { id: 'one', name: 'B', meta: { count: 2 } },
+      autoCommit: false,
+    });
+
+    const stored = await storage.getAll();
+    expect(stored.mutations.length).toBe(1);
+    expect(stored.mutations[0]?.change.entity).toEqual({
+      id: 'one',
+      name: 'B',
+      meta: { count: 2 },
+    });
+    expect(stored.snapshots[0]?.current).toEqual({
+      id: 'one',
+      name: 'B',
+      meta: { count: 2 },
+    });
+  });
+
+  it('restores a clean collection when load is called with no storage', async () => {
+    const collection = new Collection<TestEntity>();
+    collection.upsert({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+    });
+
+    await collection.load();
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+  });
+
+  it('replaces in-memory state when load is called after mutations', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    await storage.setEntity({ id: 'one', name: 'Old', meta: { count: 1 } });
+
+    const collection = new Collection<TestEntity>({ storage });
+    await collection.load();
+    collection.upsert({
+      entity: { id: 'two', name: 'New', meta: { count: 2 } },
+      autoCommit: false,
+    });
+
+    await collection.load();
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Old',
+      meta: { count: 1 },
+    });
+    expect(collection.get('two')).toEqual({
+      id: 'two',
+      name: 'New',
+      meta: { count: 2 },
+    });
   });
 });

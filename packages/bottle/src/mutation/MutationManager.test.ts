@@ -1,5 +1,7 @@
 import { describe, expect, it } from '@rstest/core';
 
+import { LocalStorage } from '../storage/LocalStorage';
+
 import { Mutation } from './Mutation';
 import { MutationManager } from './MutationManager';
 
@@ -138,5 +140,113 @@ describe('MutationManager', () => {
     manager.setActiveMutation(mutation);
 
     expect(manager.getActiveMutation('one')).toBe(mutation);
+  });
+
+  it('stores mutation and snapshot to storage on setActiveMutation', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const manager = new MutationManager<TestEntity>({ storage });
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      },
+      rollbackChange: () => {},
+    });
+
+    manager.setActiveMutation(mutation);
+
+    const stored = await storage.getAll();
+    expect(stored.mutations.length).toBe(1);
+    expect(stored.mutations[0]?.id).toBe(mutation.id);
+    expect(stored.snapshots.length).toBe(1);
+    expect(stored.snapshots[0]?.id).toBe('one');
+  });
+
+  it('removes mutation and snapshot from storage on removeActiveMutation', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const manager = new MutationManager<TestEntity>({ storage });
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      },
+      rollbackChange: () => {},
+    });
+
+    manager.setActiveMutation(mutation);
+    manager.removeActiveMutation({ id: 'one', mutationId: mutation.id });
+
+    const stored = await storage.getAll();
+    expect(stored.mutations).toEqual([]);
+    expect(stored.snapshots).toEqual([]);
+  });
+
+  it('updates snapshot in storage on setOriginalSnapshot', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    const manager = new MutationManager<TestEntity>({ storage });
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'update',
+        id: 'one',
+        entity: { id: 'one', name: 'Updated', meta: { count: 2 } },
+        oldEntity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      },
+      rollbackChange: () => {},
+    });
+
+    manager.setActiveMutation(mutation);
+    manager.setOriginalSnapshot({
+      id: 'one',
+      original: { id: 'one', name: 'External', meta: { count: 3 } },
+    });
+
+    const stored = await storage.getAll();
+    expect(stored.snapshots[0]?.original).toEqual({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+  });
+
+  it('clears in-memory state on clear', () => {
+    const manager = new MutationManager<TestEntity>();
+    const mutation = new Mutation<TestEntity>({
+      change: {
+        type: 'insert',
+        id: 'one',
+        entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      },
+      rollbackChange: () => {},
+    });
+
+    manager.setActiveMutation(mutation);
+    manager.clear();
+
+    expect(manager.getActiveMutation('one')).toBeUndefined();
+    expect(manager.getCurrentSnapshot('one')).toBeUndefined();
+  });
+
+  it('restores snapshots from hydrate data', () => {
+    const manager = new MutationManager<TestEntity>();
+
+    manager.restoreSnapshot({
+      id: 'one',
+      original: { id: 'one', name: 'Original', meta: { count: 1 } },
+      current: { id: 'one', name: 'Updated', meta: { count: 2 } },
+      mutationId: 'mut-1',
+    });
+
+    expect(manager.getOriginalSnapshot('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+    expect(manager.getCurrentSnapshot('one')).toEqual({
+      id: 'one',
+      name: 'Updated',
+      meta: { count: 2 },
+    });
   });
 });

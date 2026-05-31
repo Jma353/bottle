@@ -5,6 +5,7 @@ import { foldChange } from './mutation/foldChange';
 import { Mutation } from './mutation/Mutation';
 import { MutationManager } from './mutation/MutationManager';
 import type { EntitySnapshots } from './mutation/MutationManager';
+import type { Storage } from './storage/Storage';
 import type { Entity, ItemChange, ChangeHandler, DeepReadonly } from './types';
 import { deepFreeze } from './utils/deepFreeze';
 
@@ -24,9 +25,18 @@ export class Collection<T extends Entity> {
   /**
    * Manager tracking active mutations and snapshots for collection entities.
    */
-  protected mutationManager = new MutationManager<T>();
+  protected mutationManager: MutationManager<T>;
 
-  constructor() {
+  /**
+   * Optional storage backend for persisting collection state.
+   */
+  protected storage?: Storage<T>;
+
+  constructor(args?: { storage?: Storage<T> }) {
+    const { storage } = args ?? {};
+    this.storage = storage;
+    this.mutationManager = new MutationManager<T>({ storage });
+
     makeObservable(this, {
       all: computed,
       get: action.bound,
@@ -37,7 +47,56 @@ export class Collection<T extends Entity> {
       remove: action.bound,
       commit: action.bound,
       rollback: action.bound,
+      load: action.bound,
     });
+  }
+
+  /**
+   * Hydrate collection state from the attached storage backend.
+   */
+  async load(): Promise<void> {
+    if (!this.storage) {
+      return;
+    }
+
+    const { entities, snapshots, mutations } = await this.storage.getAll();
+
+    this.items.clear();
+    this.mutationManager.clear();
+
+    for (const entity of entities) {
+      this.items.set(entity.id, deepFreeze(entity));
+    }
+
+    for (const storedMutation of mutations) {
+      if (storedMutation.status !== 'draft') {
+        continue;
+      }
+
+      const mutation = new Mutation<T>({
+        change: storedMutation.change,
+        rollbackChange: () => {
+          this.rollbackMutation(mutation);
+        },
+        onSettled: () => {
+          const currentChange = mutation.change;
+          this.mutationManager.removeActiveMutation({
+            id: currentChange.id,
+            mutationId: mutation.id,
+          });
+        },
+      });
+      this.mutationManager.setActiveMutation(mutation);
+    }
+
+    for (const snapshot of snapshots) {
+      this.mutationManager.restoreSnapshot({
+        id: snapshot.id,
+        original: snapshot.original ? snapshot.original : undefined,
+        current: snapshot.current ? snapshot.current : undefined,
+        mutationId: snapshot.mutationId,
+      });
+    }
   }
 
   /**
@@ -121,7 +180,7 @@ export class Collection<T extends Entity> {
   }): void {
     const { id, patch, sync, onError, autoCommit = true } = args;
     const existing = this.get(id);
-    const updated = { ...(existing as T), ...patch, id } as T;
+    const updated = { ...(existing as T), ...patch, id };
     this.upsert({ entity: updated, sync, onError, autoCommit });
   }
 
@@ -196,8 +255,10 @@ export class Collection<T extends Entity> {
    */
   ingest(args: { entity: T }): DeepReadonly<T> {
     const { entity } = args;
-    const frozen = deepFreeze(entity);
+    const frozen = deepFreeze<T>(entity);
     this.items.set(entity.id, frozen);
+
+    this.storage?.setEntity(frozen);
 
     const mutation = this.mutationManager.getActiveMutation(entity.id);
     if (mutation) {
@@ -231,6 +292,8 @@ export class Collection<T extends Entity> {
     const frozen = existing as DeepReadonly<T>;
     this.items.delete(id);
 
+    this.storage?.deleteEntity(id);
+
     const mutation = this.mutationManager.getActiveMutation(id);
     if (mutation) {
       this.mutationManager.removeActiveMutation({
@@ -255,7 +318,7 @@ export class Collection<T extends Entity> {
 
   private applyUpsert(entity: T): ItemChange<T> | undefined {
     const existing = this.items.get(entity.id);
-    const frozen = deepFreeze(entity);
+    const frozen = deepFreeze<T>(entity);
     if (existing && isEqual(existing, frozen)) {
       return undefined;
     }
@@ -269,6 +332,8 @@ export class Collection<T extends Entity> {
     }
     this.items.set(entity.id, frozen);
     this.emit(change);
+
+    this.storage?.setEntity(frozen);
 
     return change;
   }
@@ -287,6 +352,9 @@ export class Collection<T extends Entity> {
     };
     this.emit(change);
     this.items.delete(id);
+
+    this.storage?.deleteEntity(id);
+
     return change;
   }
 

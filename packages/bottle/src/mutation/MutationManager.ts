@@ -1,5 +1,6 @@
 import { observable } from 'mobx';
 
+import type { Storage } from '../storage/Storage';
 import type { DeepReadonly, Entity } from '../types';
 
 import type { Mutation } from './Mutation';
@@ -26,6 +27,16 @@ export class MutationManager<T extends Entity> {
   private activeMutations = observable.map<string, Mutation<T>>();
 
   /**
+   * Optional storage backend for persisting mutation state.
+   */
+  private storage?: Storage<T>;
+
+  constructor(args?: { storage?: Storage<T> }) {
+    const { storage } = args ?? {};
+    this.storage = storage;
+  }
+
+  /**
    * Returns the active mutation for the given entity id.
    */
   getActiveMutation(id: string): Mutation<T> | undefined {
@@ -38,6 +49,12 @@ export class MutationManager<T extends Entity> {
   setActiveMutation(mutation: Mutation<T>): void {
     this.activeMutations.set(mutation.change.id, mutation);
     this.setPendingSnapshot(mutation);
+
+    this.storage?.setMutation({
+      id: mutation.id,
+      change: mutation.change,
+      status: mutation.status,
+    });
   }
 
   /**
@@ -53,6 +70,9 @@ export class MutationManager<T extends Entity> {
     if (pending?.mutationId === mutationId) {
       this.pendingSnapshots.delete(id);
     }
+
+    this.storage?.deleteMutation(mutationId);
+    this.storage?.deleteSnapshot(id);
   }
 
   /**
@@ -85,6 +105,12 @@ export class MutationManager<T extends Entity> {
     const pending = this.pendingSnapshots.get(id);
     if (pending) {
       pending.original = original;
+      this.storage?.setSnapshot({
+        id,
+        original: pending.original,
+        current: pending.current,
+        mutationId: pending.mutationId,
+      });
     }
   }
 
@@ -94,18 +120,33 @@ export class MutationManager<T extends Entity> {
   setPendingSnapshot(mutation: Mutation<T>): void {
     const { change } = mutation;
 
-    this.pendingSnapshots.set(change.id, {
+    const snapshot = {
       mutationId: mutation.id,
       original: change.oldEntity,
       current: change.type === 'delete' ? undefined : change.entity,
       isDraft: mutation.status === 'draft',
-    });
+    };
+
+    this.pendingSnapshots.set(change.id, snapshot);
 
     for (const [id, pending] of this.pendingSnapshots) {
       if (pending.mutationId === mutation.id && id !== change.id) {
         this.pendingSnapshots.delete(id);
       }
     }
+
+    this.storage?.setSnapshot({
+      id: change.id,
+      original: snapshot.original,
+      current: snapshot.current,
+      mutationId: snapshot.mutationId,
+    });
+
+    this.storage?.setMutation({
+      id: mutation.id,
+      change: mutation.change,
+      status: mutation.status,
+    });
   }
 
   /**
@@ -116,6 +157,35 @@ export class MutationManager<T extends Entity> {
     const pending = this.pendingSnapshots.get(id);
     if (pending?.mutationId === mutationId) {
       this.pendingSnapshots.delete(id);
+      this.storage?.deleteSnapshot(id);
     }
+  }
+
+  /**
+   * Restore a snapshot directly during hydration.
+   */
+  restoreSnapshot(args: {
+    id: string;
+    original: DeepReadonly<T> | undefined;
+    current: DeepReadonly<T> | undefined;
+    mutationId: string;
+  }): void {
+    const { id, original, current, mutationId } = args;
+    const active = this.activeMutations.get(id);
+    const isDraft = active?.id === mutationId && active.status === 'draft';
+    this.pendingSnapshots.set(id, {
+      mutationId,
+      original,
+      current,
+      isDraft,
+    });
+  }
+
+  /**
+   * Clear all in-memory mutation and snapshot state.
+   */
+  clear(): void {
+    this.activeMutations.clear();
+    this.pendingSnapshots.clear();
   }
 }
