@@ -77,4 +77,12 @@ describe('deepFreeze', () => {
     expect(() => deepFreeze(obj)).not.toThrow();
     expect(deepFreeze(obj)).toBe(obj);
   });
+
+  it('handles circular references without crashing', () => {
+    const obj: Record<string, unknown> = { a: 1 };
+    obj.self = obj;
+    expect(() => deepFreeze(obj)).not.toThrow();
+    expect(Object.isFrozen(obj)).toBe(true);
+    expect(Object.isFrozen(obj.self)).toBe(true);
+  });
 });
