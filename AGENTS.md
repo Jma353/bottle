@@ -2,7 +2,7 @@
 
 ## Package overview
 
-Lightweight reactive store for normalized client data with sync, mutations, and local-first storage.
+See README.md.
 
 ## Style guide
 
