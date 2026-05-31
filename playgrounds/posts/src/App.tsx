@@ -6,8 +6,8 @@ import styled from 'styled-components';
 import { AddPostForm } from './components/AddPostForm';
 import { AddUserForm } from './components/AddUserForm';
 import { ChangeLog } from './components/ChangeLog';
-import { UsersWithPosts } from './components/UsersWithPosts';
 import { Panel } from './components/ui';
+import { UsersWithPosts } from './components/UsersWithPosts';
 import { store, type Post, type User } from './store';
 
 function formatUser(user: User): string {

@@ -2,6 +2,7 @@ import { observer } from 'mobx-react-lite';
 import styled from 'styled-components';
 
 import { store, type Post, type User } from '../store';
+
 import { AuthorSelect } from './AuthorSelect';
 import { Button, Empty, Input } from './ui';
 
@@ -62,7 +63,7 @@ function UsersWithPostsInner(props: Props) {
   }
 
   function getChangedFields(
-    post: Post
+    post: Post,
   ): { label: string; oldValue?: string; newValue: string }[] {
     const snap = store.posts.snapshot(post.id);
     const original = snap.original as Post | undefined;
@@ -74,8 +75,7 @@ function UsersWithPostsInner(props: Props) {
       ];
     }
 
-    const fields: { label: string; oldValue?: string; newValue: string }[] =
-      [];
+    const fields: { label: string; oldValue?: string; newValue: string }[] = [];
     if (original.title !== post.title) {
       fields.push({
         label: 'Title',
@@ -95,9 +95,7 @@ function UsersWithPostsInner(props: Props) {
 
   return (
     <>
-      {users.length === 0 ? (
-        <Empty>No users yet.</Empty>
-      ) : null}
+      {users.length === 0 ? <Empty>No users yet.</Empty> : null}
       {users.map(user => {
         const userPosts: Post[] = [];
         for (const p of posts) {
@@ -219,14 +217,10 @@ function UsersWithPostsInner(props: Props) {
                           <PostCardHeader>
                             <PostTitle>{post.title}</PostTitle>
                             <ButtonGroup>
-                              <Button
-                                onClick={() => onStartEditPost(post)}
-                              >
+                              <Button onClick={() => onStartEditPost(post)}>
                                 Edit
                               </Button>
-                              <Button
-                                onClick={() => onDeletePost(post.id)}
-                              >
+                              <Button onClick={() => onDeletePost(post.id)}>
                                 Delete
                               </Button>
                             </ButtonGroup>

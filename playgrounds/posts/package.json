@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:all": "concurrently \"pnpm dev\" \"pnpm server\"",
+    "dev:all": "concurrently \"pnpm dev\" \"pnpm run server\"",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "server": "tsx server.ts"

@@ -1,8 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { GlobalStyles } from './styles';
 import { App } from './App';
+import { GlobalStyles } from './styles';
 
 const root = createRoot(document.getElementById('root')!);
 

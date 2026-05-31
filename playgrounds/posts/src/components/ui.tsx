@@ -11,7 +11,7 @@ export const FieldRoot = styled(Field.Root)`
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-3);
 `;
 
 export const FieldLabel = styled(Field.Label)`
