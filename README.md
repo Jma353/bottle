@@ -4,7 +4,7 @@
   <img src="assets/bottle.png" width="200" />
 </p>
 
-Lightweight reactive collections for normalized client data with mutations.
+Lightweight reactive store for normalized client data with mutations and optional offline storage.
 
 ## Install
 
@@ -14,9 +14,11 @@ pnpm add bottle
 
 ## Collection
 
-`Collection<T>` stores entities by required string `id`. Reads return frozen
-readonly snapshots, so callers update state through collection APIs instead of
-mutating returned objects.
+`Collection<T>` stores entities by required string `id`. Every read, write, sync, and listener lives on the collection itself.
+
+### Writing data
+
+`upsert` inserts or replaces one entity. `delete` removes an entity by id. Both apply optimistically and can sync to a server automatically.
 
 ```ts
 import { Collection } from 'bottle';
@@ -34,41 +36,27 @@ posts.upsert({
   },
 });
 
-console.log(posts.get('post-1'));
-```
-
-`upsert` inserts or replaces one entity. `delete` removes an entity by id.
-Both apply optimistically.
-
-```ts
 posts.delete({ id: 'post-1' });
 ```
 
-## Ingest
-
-`ingest` inserts or updates an entity from an external source without creating
-a mutation or emitting change events. Use it when hydrating the collection from
-a server response.
+`update` applies a partial optimistic patch:
 
 ```ts
-for (const post of serverPosts) {
-  posts.ingest({ entity: post });
-}
+posts.update({
+  id: 'post-1',
+  patch: { published: true },
+  sync: async change => {
+    await fetch(`/api/posts/${change.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(change.entity),
+    });
+  },
+});
 ```
 
-`remove` deletes an entity by id from an external source without creating a
-mutation or emitting change events. Use it when syncing deletions from a server.
+### Reading data
 
-```ts
-for (const id of deletedPostIds) {
-  posts.remove({ id });
-}
-```
-
-## Reads and listeners
-
-Use `get`, `all`, `find`, and `filter` to read the current optimistic state.
-All returned values and arrays are deeply frozen.
+Use `get`, `all`, `find`, and `filter`. All returned values and arrays are deeply frozen so you cannot mutate state outside the collection's APIs.
 
 ```ts
 const post = posts.get('post-1');
@@ -77,8 +65,9 @@ const draft = posts.find(p => !p.published);
 const published = posts.filter(p => p.published);
 ```
 
-`onChange` emits an `ItemChange` every time an entity is inserted, updated, or
-deleted. The returned function unsubscribes the handler.
+### Reacting to changes
+
+`onChange` emits an event every time an entity is inserted, updated, or deleted. The returned function unsubscribes the handler.
 
 ```ts
 const stop = posts.onChange(change => {
@@ -87,11 +76,23 @@ const stop = posts.onChange(change => {
 stop();
 ```
 
-## Mutations
+### Hydrating from a server
 
-`upsert`, `update`, and `delete` all create an active mutation and auto-commit
-it by default. Pass `autoCommit: false` to queue the change instead. Each accepts
-an optional `onError` callback for handling sync failures.
+`ingest` inserts or updates an entity from an external source without creating a mutation or emitting change events. `remove` deletes by id without creating a mutation or emitting change events. Use these when syncing server state into the collection.
+
+```ts
+for (const post of serverPosts) {
+  posts.ingest({ entity: post });
+}
+
+for (const id of deletedPostIds) {
+  posts.remove({ id });
+}
+```
+
+### Drafts and pending mutations
+
+By default, `upsert`, `update`, and `delete` auto-commit. Pass `autoCommit: false` to queue the change instead. Each accepts an optional `onError` callback for handling sync failures.
 
 ```ts
 posts.upsert({
@@ -110,33 +111,16 @@ await posts.commit({
 });
 ```
 
-Use `snapshot` to inspect the original and current state of an entity while a
-mutation is pending:
+Use `snapshot` to inspect the original and current state of an entity while a mutation is pending:
 
 ```ts
 const { original, current } = posts.snapshot('post-2');
 ```
 
-Roll back a draft or pending mutation for an entity:
+Roll back a draft or pending mutation:
 
 ```ts
 posts.rollback({ id: 'post-2' });
 ```
 
-Draft changes for the same entity fold into one active mutation. Later changes
-made while a previous mutation is already pending create a separate mutation.
-
-`Collection#update` applies partial optimistic updates:
-
-```ts
-posts.update({
-  id: 'post-1',
-  patch: { published: true },
-  sync: async change => {
-    await fetch(`/api/posts/${change.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(change.entity),
-    });
-  },
-});
-```
+Draft changes for the same entity fold into one active mutation. Later changes made while a previous mutation is already pending create a separate mutation.
