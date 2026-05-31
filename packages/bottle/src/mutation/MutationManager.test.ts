@@ -106,7 +106,7 @@ describe('MutationManager', () => {
     expect(manager.getCurrentSnapshot('one')).toBeUndefined();
   });
 
-  it('removes the active mutation without clearing the pending snapshot', () => {
+  it('removes the active mutation and clears the pending snapshot', () => {
     const manager = new MutationManager<TestEntity>();
     const mutation = new Mutation<TestEntity>({
       change: {
@@ -121,11 +121,7 @@ describe('MutationManager', () => {
     manager.removeActiveMutation({ id: 'one', mutationId: mutation.id });
 
     expect(manager.getActiveMutation('one')).toBeUndefined();
-    expect(manager.getCurrentSnapshot('one')).toEqual({
-      id: 'one',
-      name: 'Original',
-      meta: { count: 1 },
-    });
+    expect(manager.getCurrentSnapshot('one')).toBeUndefined();
   });
 
   it('returns the active mutation', () => {

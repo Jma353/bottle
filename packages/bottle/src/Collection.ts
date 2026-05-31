@@ -202,10 +202,6 @@ export class Collection<T extends Entity> {
     const mutation = this.mutationManager.getActiveMutation(entity.id);
     if (mutation) {
       if (mutation.change.type === 'insert') {
-        this.mutationManager.removePendingSnapshot({
-          id: entity.id,
-          mutationId: mutation.id,
-        });
         this.mutationManager.removeActiveMutation({
           id: entity.id,
           mutationId: mutation.id,
@@ -291,10 +287,6 @@ export class Collection<T extends Entity> {
       },
       onSettled: () => {
         const currentChange = mutation.change;
-        this.mutationManager.removePendingSnapshot({
-          id: currentChange.id,
-          mutationId: mutation.id,
-        });
         this.mutationManager.removeActiveMutation({
           id: currentChange.id,
           mutationId: mutation.id,

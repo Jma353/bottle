@@ -789,4 +789,107 @@ describe('Collection', () => {
 
     expect(receivedError?.message).toBe('sync failed');
   });
+
+  it('clears snapshots when an update mutation settles on commit', async () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'one', sync: noopSync });
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Updated',
+        meta: { count: 2 },
+      },
+      autoCommit: false,
+    });
+
+    await collection.commit({ id: 'one', sync: noopSync });
+
+    const snap = collection.snapshot('one');
+    expect(snap.original).toBeUndefined();
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Updated',
+      meta: { count: 2 },
+    });
+    expect(snap.isDraft).toBe(false);
+  });
+
+  it('clears snapshots when a mutation settles on rollback', () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Updated',
+        meta: { count: 2 },
+      },
+      autoCommit: false,
+    });
+
+    collection.rollback({ id: 'one' });
+
+    const snap = collection.snapshot('one');
+    expect(snap.original).toBeUndefined();
+    expect(snap.current).toBeUndefined();
+    expect(snap.isDraft).toBe(false);
+  });
+
+  it('clears snapshots when a mutation settles on commit failure', async () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Original',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Updated',
+        meta: { count: 2 },
+      },
+      autoCommit: false,
+    });
+
+    try {
+      await collection.commit({
+        id: 'one',
+        sync: async () => {
+          throw new Error('sync failed');
+        },
+      });
+    } catch {
+      // expected
+    }
+
+    const snap = collection.snapshot('one');
+    expect(snap.original).toBeUndefined();
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Updated',
+      meta: { count: 2 },
+    });
+    expect(snap.isDraft).toBe(false);
+  });
 });

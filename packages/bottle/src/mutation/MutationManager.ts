@@ -41,13 +41,17 @@ export class MutationManager<T extends Entity> {
   }
 
   /**
-   * Removes the active mutation if it matches the given mutation id.
+   * Removes the active mutation and its pending snapshot if they match the given mutation id.
    */
   removeActiveMutation(args: { id: string; mutationId: string }): void {
     const { id, mutationId } = args;
     const active = this.activeMutations.get(id);
     if (active?.id === mutationId) {
       this.activeMutations.delete(id);
+    }
+    const pending = this.pendingSnapshots.get(id);
+    if (pending?.mutationId === mutationId) {
+      this.pendingSnapshots.delete(id);
     }
   }
 
