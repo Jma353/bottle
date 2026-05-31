@@ -56,6 +56,15 @@ for (const post of serverPosts) {
 }
 ```
 
+`remove` deletes an entity by id from an external source without creating a
+mutation or emitting change events. Use it when syncing deletions from a server.
+
+```ts
+for (const id of deletedPostIds) {
+  posts.remove({ id });
+}
+```
+
 ## Reads and listeners
 
 Use `get`, `all`, `find`, and `filter` to read the current optimistic state.

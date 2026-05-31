@@ -34,6 +34,7 @@ export class Collection<T extends Entity> {
       delete: action.bound,
       update: action.bound,
       ingest: action.bound,
+      remove: action.bound,
       commit: action.bound,
       rollback: action.bound,
     });
@@ -215,6 +216,31 @@ export class Collection<T extends Entity> {
 
     // Intentionally no emit() in here
     return frozen as DeepReadonly<T>;
+  }
+
+  /**
+   * Removes an entity by id from an external source without creating a mutation.
+   */
+  remove(args: { id: string }): DeepReadonly<T> | undefined {
+    const { id } = args;
+    const existing = this.items.get(id);
+    if (!existing) {
+      return undefined;
+    }
+
+    const frozen = existing as DeepReadonly<T>;
+    this.items.delete(id);
+
+    const mutation = this.mutationManager.getActiveMutation(id);
+    if (mutation) {
+      this.mutationManager.removeActiveMutation({
+        id,
+        mutationId: mutation.id,
+      });
+    }
+
+    // Intentionally no emit() in here
+    return frozen;
   }
 
   /**

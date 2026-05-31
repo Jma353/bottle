@@ -775,6 +775,80 @@ describe('Collection', () => {
     });
   });
 
+  it('removes externally deleted entities without creating a mutation', () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.ingest({
+      entity: {
+        id: 'one',
+        name: 'External',
+        meta: { count: 1 },
+      },
+    });
+
+    const result = collection.remove({ id: 'one' });
+
+    expect(result).toEqual({
+      id: 'one',
+      name: 'External',
+      meta: { count: 1 },
+    });
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(collection.get('one')).toBeUndefined();
+  });
+
+  it('returns undefined when removing a non-existent entity', () => {
+    const collection = new Collection<TestEntity>();
+
+    const result = collection.remove({ id: 'one' });
+
+    expect(result).toBeUndefined();
+  });
+
+  it('removes an active mutation when the entity is removed', () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.upsert({
+      entity: {
+        id: 'one',
+        name: 'Pending',
+        meta: { count: 1 },
+      },
+      autoCommit: false,
+    });
+
+    let snap = collection.snapshot('one');
+    expect(snap.isDraft).toBe(true);
+
+    collection.remove({ id: 'one' });
+
+    snap = collection.snapshot('one');
+    expect(snap.current).toBeUndefined();
+    expect(snap.isDraft).toBe(false);
+    expect(collection.get('one')).toBeUndefined();
+  });
+
+  it('does not emit changes when removing an entity', () => {
+    const collection = new Collection<TestEntity>();
+    const receivedChanges: ItemChange<TestEntity>[] = [];
+    collection.onChange(change => {
+      receivedChanges.push(change);
+    });
+
+    collection.ingest({
+      entity: {
+        id: 'one',
+        name: 'External',
+        meta: { count: 1 },
+      },
+    });
+    receivedChanges.length = 0;
+
+    collection.remove({ id: 'one' });
+
+    expect(receivedChanges).toEqual([]);
+  });
+
   it('auto-commits mutations when autoCommit is true', async () => {
     const collection = new Collection<TestEntity>();
     const entity = {
