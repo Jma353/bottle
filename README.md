@@ -1,5 +1,9 @@
 # bottle
 
+<p align="center">
+  <img src="assets/bottle.png" width="200" />
+</p>
+
 Lightweight reactive collections for normalized client data with mutations.
 
 ## Install
