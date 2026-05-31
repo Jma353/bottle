@@ -1,4 +1,4 @@
-import { Collection } from 'bottle';
+import { Collection, IndexedDBStorage } from 'bottle';
 import { makeAutoObservable } from 'mobx';
 
 type User = {
@@ -16,11 +16,20 @@ type Post = {
 const API_BASE = '/api';
 
 class Store {
-  users = new Collection<User>();
-  posts = new Collection<Post>();
+  users = new Collection<User>({
+    storage: new IndexedDBStorage<User>({ dbName: 'playground-users' }),
+  });
+  posts = new Collection<Post>({
+    storage: new IndexedDBStorage<Post>({ dbName: 'playground-posts' }),
+  });
 
   constructor() {
     makeAutoObservable(this);
+  }
+
+  async loadFromStorage() {
+    await this.users.load();
+    await this.posts.load();
   }
 
   async loadUsers() {

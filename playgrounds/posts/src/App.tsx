@@ -53,6 +53,7 @@ function AppInner() {
   const [editPostAuthorId, setEditPostAuthorId] = useState('');
 
   useEffect(() => {
+    store.loadFromStorage().catch(() => {});
     store.loadUsers().catch(() => {});
     store.loadPosts().catch(() => {});
   }, []);
