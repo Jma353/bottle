@@ -7,6 +7,7 @@ import { AddPostForm } from './components/AddPostForm';
 import { AddUserForm } from './components/AddUserForm';
 import { ChangeLog } from './components/ChangeLog';
 import { UsersWithPosts } from './components/UsersWithPosts';
+import { Panel } from './components/ui';
 import { store, type Post, type User } from './store';
 
 function formatUser(user: User): string {
@@ -234,12 +235,6 @@ const Row = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-`;
-
-const Panel = styled.div`
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
 `;
 
 const Title = styled.h2`

@@ -1,6 +1,7 @@
 import { Button } from '@base-ui/react/button';
-import { Field } from '@base-ui/react/field';
 import styled from 'styled-components';
+
+import { FieldLabel, FieldRoot, Input } from './ui';
 
 type Props = {
   name: string;
@@ -36,25 +37,6 @@ export function AddUserForm(props: Props) {
     </>
   );
 }
-
-const FieldRoot = styled(Field.Root)`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
-`;
-
-const FieldLabel = styled(Field.Label)`
-  font-size: 14px;
-  font-weight: 500;
-`;
-
-const Input = styled.input`
-  padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-`;
 
 const StyledButton = styled(Button)`
   padding: 6px 12px;

@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { Empty, Panel } from './ui';
+
 type Props = {
   title: string;
   entries: string[];
@@ -24,12 +26,6 @@ export function ChangeLog(props: Props) {
   );
 }
 
-const Panel = styled.div`
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-`;
-
 const Title = styled.h3`
   margin: 0 0 12px;
   font-size: 16px;
@@ -50,9 +46,4 @@ const Entry = styled.div`
   padding: 4px 8px;
   background: #f9fafb;
   border-radius: 4px;
-`;
-
-const Empty = styled.div`
-  font-size: 14px;
-  color: #6b7280;
 `;

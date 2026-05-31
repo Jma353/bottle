@@ -1,8 +1,9 @@
-import { Select } from '@base-ui/react/select';
 import { observer } from 'mobx-react-lite';
 import styled from 'styled-components';
 
 import { store, type Post, type User } from '../store';
+import { AuthorSelect } from './AuthorSelect';
+import { Button, Empty, Input } from './ui';
 
 type Props = {
   users: readonly User[];
@@ -60,7 +61,9 @@ function UsersWithPostsInner(props: Props) {
     return user?.name ?? authorId;
   }
 
-  function getChangedFields(post: Post): { label: string; oldValue?: string; newValue: string }[] {
+  function getChangedFields(
+    post: Post
+  ): { label: string; oldValue?: string; newValue: string }[] {
     const snap = store.posts.snapshot(post.id);
     const original = snap.original as Post | undefined;
 
@@ -71,9 +74,14 @@ function UsersWithPostsInner(props: Props) {
       ];
     }
 
-    const fields: { label: string; oldValue?: string; newValue: string }[] = [];
+    const fields: { label: string; oldValue?: string; newValue: string }[] =
+      [];
     if (original.title !== post.title) {
-      fields.push({ label: 'Title', oldValue: original.title, newValue: post.title });
+      fields.push({
+        label: 'Title',
+        oldValue: original.title,
+        newValue: post.title,
+      });
     }
     if (original.authorId !== post.authorId) {
       fields.push({
@@ -88,7 +96,7 @@ function UsersWithPostsInner(props: Props) {
   return (
     <>
       {users.length === 0 ? (
-        <div style={{ fontSize: '14px', color: '#6b7280' }}>No users yet.</div>
+        <Empty>No users yet.</Empty>
       ) : null}
       {users.map(user => {
         const userPosts: Post[] = [];
@@ -108,17 +116,19 @@ function UsersWithPostsInner(props: Props) {
                     value={editName}
                     onChange={e => onEditNameChange(e.target.value)}
                     placeholder="Name"
+                    style={{ width: '120px' }}
                   />
                   <Input
                     value={editAge}
                     onChange={e => onEditAgeChange(e.target.value)}
                     placeholder="Age"
                     type="number"
+                    style={{ width: '120px' }}
                   />
                 </EditRow>
                 <EditRow>
-                  <ActionButton onClick={onSaveUserEdit}>Save</ActionButton>
-                  <ActionButton onClick={onCancelUserEdit}>Cancel</ActionButton>
+                  <Button onClick={onSaveUserEdit}>Save</Button>
+                  <Button onClick={onCancelUserEdit}>Cancel</Button>
                 </EditRow>
               </>
             ) : (
@@ -126,14 +136,10 @@ function UsersWithPostsInner(props: Props) {
                 <UserName>
                   {user.name} (age {user.age})
                 </UserName>
-                <UserActions>
-                  <ActionButton onClick={() => onStartEditUser(user)}>
-                    Edit
-                  </ActionButton>
-                  <ActionButton onClick={() => onDeleteUser(user.id)}>
-                    Delete
-                  </ActionButton>
-                </UserActions>
+                <ButtonGroup>
+                  <Button onClick={() => onStartEditUser(user)}>Edit</Button>
+                  <Button onClick={() => onDeleteUser(user.id)}>Delete</Button>
+                </ButtonGroup>
               </UserHeader>
             )}
             {userPosts.length > 0 ? (
@@ -153,56 +159,19 @@ function UsersWithPostsInner(props: Props) {
                                 onEditPostTitleChange(e.target.value)
                               }
                               placeholder="Title"
+                              style={{ width: '120px' }}
                             />
-                            <Select.Root
-                              value={editPostAuthorId || null}
-                              onValueChange={(v: string | null) =>
-                                onEditPostAuthorIdChange(v ?? '')
-                              }
-                            >
-                              <SelectTrigger>
-                                <Select.Value>
-                                  {(value: string | null) => {
-                                    if (value === null) {
-                                      return 'Select author';
-                                    }
-                                    const u = users.find(
-                                      user => user.id === value
-                                    );
-                                    return u?.name ?? value;
-                                  }}
-                                </Select.Value>
-                                <SelectIcon>
-                                  <ChevronIcon />
-                                </SelectIcon>
-                              </SelectTrigger>
-                              <Select.Portal>
-                                <SelectPositioner side="bottom" sideOffset={4}>
-                                  <SelectPopup>
-                                    <SelectList>
-                                      {users.map(user => (
-                                        <SelectItem
-                                          key={user.id}
-                                          value={user.id}
-                                        >
-                                          <SelectItemText>
-                                            {user.name}
-                                          </SelectItemText>
-                                        </SelectItem>
-                                      ))}
-                                    </SelectList>
-                                  </SelectPopup>
-                                </SelectPositioner>
-                              </Select.Portal>
-                            </Select.Root>
+                            <div style={{ width: '120px' }}>
+                              <AuthorSelect
+                                users={users}
+                                value={editPostAuthorId || null}
+                                onChange={onEditPostAuthorIdChange}
+                              />
+                            </div>
                           </EditRow>
                           <EditRow>
-                            <ActionButton onClick={onSavePostEdit}>
-                              Save
-                            </ActionButton>
-                            <ActionButton onClick={onCancelPostEdit}>
-                              Cancel
-                            </ActionButton>
+                            <Button onClick={onSavePostEdit}>Save</Button>
+                            <Button onClick={onCancelPostEdit}>Cancel</Button>
                           </EditRow>
                         </>
                       ) : isDraft ? (
@@ -211,7 +180,9 @@ function UsersWithPostsInner(props: Props) {
                             <PostTitle>{post.title}</PostTitle>
                             <DraftBadge>Draft</DraftBadge>
                           </PostCardHeader>
-                          <PostMeta>Author: {getAuthorName(post.authorId)}</PostMeta>
+                          <PostMeta>
+                            Author: {getAuthorName(post.authorId)}
+                          </PostMeta>
                           <ChangedFields>
                             <ChangedFieldsTitle>
                               {store.posts.snapshot(post.id).original
@@ -223,7 +194,12 @@ function UsersWithPostsInner(props: Props) {
                                 <strong>{field.label}:</strong>{' '}
                                 {field.oldValue !== undefined ? (
                                   <>
-                                    <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>
+                                    <span
+                                      style={{
+                                        textDecoration: 'line-through',
+                                        color: '#9ca3af',
+                                      }}
+                                    >
                                       {field.oldValue}
                                     </span>{' '}
                                     → {field.newValue}
@@ -234,31 +210,31 @@ function UsersWithPostsInner(props: Props) {
                               </ChangedFieldItem>
                             ))}
                           </ChangedFields>
-                          <PostCardActions>
-                            <ActionButton onClick={() => onCommitPost(post.id)}>
+                          <EditRow>
+                            <Button onClick={() => onCommitPost(post.id)}>
                               Save Draft
-                            </ActionButton>
-                            <ActionButton onClick={() => onRollbackPost(post.id)}>
+                            </Button>
+                            <Button onClick={() => onRollbackPost(post.id)}>
                               Cancel
-                            </ActionButton>
-                          </PostCardActions>
+                            </Button>
+                          </EditRow>
                         </>
                       ) : (
                         <>
                           <PostCardHeader>
                             <PostTitle>{post.title}</PostTitle>
-                            <PostActions>
-                              <ActionButton
+                            <ButtonGroup>
+                              <Button
                                 onClick={() => onStartEditPost(post)}
                               >
                                 Edit
-                              </ActionButton>
-                              <ActionButton
+                              </Button>
+                              <Button
                                 onClick={() => onDeletePost(post.id)}
                               >
                                 Delete
-                              </ActionButton>
-                            </PostActions>
+                              </Button>
+                            </ButtonGroup>
                           </PostCardHeader>
                           <PostMeta>
                             Author: {getAuthorName(post.authorId)}
@@ -278,23 +254,6 @@ function UsersWithPostsInner(props: Props) {
 }
 
 export const UsersWithPosts = observer(UsersWithPostsInner);
-
-function ChevronIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
 
 const UserEntry = styled.div`
   padding: 8px 0;
@@ -323,87 +282,9 @@ const EditRow = styled.div`
   margin-top: 4px;
 `;
 
-const Input = styled.input`
-  padding: 4px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 14px;
-  width: 120px;
-`;
-
-const SelectTrigger = styled(Select.Trigger)`
+const ButtonGroup = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 14px;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: white;
-  cursor: pointer;
-  width: 120px;
-  text-align: left;
-`;
-
-const SelectIcon = styled(Select.Icon)`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-`;
-
-const SelectPositioner = styled(Select.Positioner)`
-  z-index: 100;
-`;
-
-const SelectPopup = styled(Select.Popup)`
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  padding: 4px;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  outline: none;
-  min-width: var(--anchor-width);
-  font-family: system-ui, -apple-system, sans-serif;
-`;
-
-const SelectList = styled(Select.List)`
-  list-style: none;
-  margin: 0;
-  padding: 0;
-`;
-
-const SelectItem = styled(Select.Item)`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-family: system-ui, -apple-system, sans-serif;
-  cursor: pointer;
-
-  &[data-highlighted] {
-    background: #f3f4f6;
-  }
-
-  &[data-selected] {
-    background: #e5e7eb;
-  }
-`;
-
-const SelectItemText = styled(Select.ItemText)``;
-
-const ActionButton = styled.button`
-  padding: 4px 10px;
-  border-radius: 4px;
-  border: 1px solid #d1d5db;
-  background: white;
-  cursor: pointer;
-  font-size: 13px;
-
-  &:hover {
-    background: #f9fafb;
-  }
+  gap: 4px;
 `;
 
 const PostsGrid = styled.div`
@@ -442,17 +323,6 @@ const PostMeta = styled.div`
   color: #6b7280;
 `;
 
-const PostActions = styled.div`
-  display: flex;
-  gap: 4px;
-`;
-
-const PostCardActions = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-`;
-
 const DraftBadge = styled.span`
   display: inline-block;
   padding: 2px 8px;
@@ -479,9 +349,4 @@ const ChangedFieldsTitle = styled.div`
 const ChangedFieldItem = styled.div`
   color: #4b5563;
   line-height: 1.5;
-`;
-
-const UserActions = styled.div`
-  display: flex;
-  gap: 4px;
 `;
