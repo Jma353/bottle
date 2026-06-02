@@ -134,8 +134,6 @@ Use `uncommittedIds` to get the ids of all entities that currently have a draft 
 const ids = posts.uncommittedIds; // readonly string[]
 ```
 
-`uncommittedIds` is a MobX `computed`, so any observer that reads it will re-run automatically when mutations are added, committed, or rolled back.
-
 Once a draft is committed, the mutation runs through the collection's sync callback. If a new change is made while a mutation is already in-flight, it becomes a separate mutation that queues behind the pending one.
 
 ### Offline storage
