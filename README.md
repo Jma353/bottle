@@ -100,7 +100,7 @@ for (const id of deletedPostIds) {
 }
 ```
 
-### Drafts and pending mutations
+### Draft and pending mutations
 
 By default, `create`, `update`, and `delete` auto-commit. Pass `autoCommit: false` to queue the change as a **draft** instead. Drafts are local, uncommitted mutations that fold into one active mutation per entity. You can keep editing, inspect the diff, then commit or roll back when ready.
 
