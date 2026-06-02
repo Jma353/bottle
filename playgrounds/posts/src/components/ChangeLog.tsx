@@ -35,7 +35,7 @@ const List = styled.div`
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-height: 200px;
+  max-height: 360px;
   overflow-y: auto;
 `;
 
@@ -43,7 +43,7 @@ const Entry = styled.div`
   font-size: var(--font-size-sm);
   font-family: var(--font-mono);
   color: var(--color-gray-700);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   background: var(--color-gray-50);
   border-radius: var(--radius-sm);
 `;

@@ -43,8 +43,7 @@ function AppInner() {
   const [age, setAge] = useState('');
   const [title, setTitle] = useState('');
   const [authorId, setAuthorId] = useState('');
-  const [userChanges, setUserChanges] = useState<string[]>([]);
-  const [postChanges, setPostChanges] = useState<string[]>([]);
+  const [changes, setChanges] = useState<string[]>([]);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editAge, setEditAge] = useState('');
@@ -63,10 +62,10 @@ function AppInner() {
 
   useEffect(() => {
     const unsubUsers = store.users.onChange(change => {
-      setUserChanges(prev => [...prev, formatUserChange(change)].slice(-20));
+      setChanges(prev => [...prev, formatUserChange(change)].slice(-30));
     });
     const unsubPosts = store.posts.onChange(change => {
-      setPostChanges(prev => [...prev, formatPostChange(change)].slice(-20));
+      setChanges(prev => [...prev, formatPostChange(change)].slice(-30));
     });
     return () => {
       unsubUsers();
@@ -162,60 +161,61 @@ function AppInner() {
 
   return (
     <Container>
-      <Row>
+      <LeftColumn>
+        <Row>
+          <Panel>
+            <Title>Add User</Title>
+            <AddUserForm
+              name={name}
+              age={age}
+              onNameChange={setName}
+              onAgeChange={setAge}
+              onAdd={handleAddUser}
+            />
+          </Panel>
+          <Panel>
+            <Title>Add Post</Title>
+            <AddPostForm
+              title={title}
+              authorId={authorId}
+              users={store.users.all}
+              onTitleChange={setTitle}
+              onAuthorChange={setAuthorId}
+              onAdd={handleAddPost}
+            />
+          </Panel>
+        </Row>
         <Panel>
-          <Title>Add User</Title>
-          <AddUserForm
-            name={name}
-            age={age}
-            onNameChange={setName}
-            onAgeChange={setAge}
-            onAdd={handleAddUser}
-          />
-        </Panel>
-        <Panel>
-          <Title>Add Post</Title>
-          <AddPostForm
-            title={title}
-            authorId={authorId}
+          <Title>Users & Posts</Title>
+          <UsersWithPosts
             users={store.users.all}
-            onTitleChange={setTitle}
-            onAuthorChange={setAuthorId}
-            onAdd={handleAddPost}
+            posts={store.posts.all}
+            editingUserId={editingUserId}
+            editName={editName}
+            editAge={editAge}
+            onStartEditUser={handleStartEditUser}
+            onEditNameChange={setEditName}
+            onEditAgeChange={setEditAge}
+            onSaveUserEdit={handleSaveUserEdit}
+            onCancelUserEdit={handleCancelUserEdit}
+            editingPostId={editingPostId}
+            editPostTitle={editPostTitle}
+            editPostAuthorId={editPostAuthorId}
+            onStartEditPost={handleStartEditPost}
+            onEditPostTitleChange={setEditPostTitle}
+            onEditPostAuthorIdChange={setEditPostAuthorId}
+            onSavePostEdit={handleSavePostEdit}
+            onCancelPostEdit={handleCancelPostEdit}
+            onDeletePost={handleDeletePost}
+            onDeleteUser={handleDeleteUser}
+            onCommitPost={handleCommitPost}
+            onRollbackPost={handleRollbackPost}
           />
         </Panel>
-      </Row>
-      <Panel>
-        <Title>Users & Posts</Title>
-        <UsersWithPosts
-          users={store.users.all}
-          posts={store.posts.all}
-          editingUserId={editingUserId}
-          editName={editName}
-          editAge={editAge}
-          onStartEditUser={handleStartEditUser}
-          onEditNameChange={setEditName}
-          onEditAgeChange={setEditAge}
-          onSaveUserEdit={handleSaveUserEdit}
-          onCancelUserEdit={handleCancelUserEdit}
-          editingPostId={editingPostId}
-          editPostTitle={editPostTitle}
-          editPostAuthorId={editPostAuthorId}
-          onStartEditPost={handleStartEditPost}
-          onEditPostTitleChange={setEditPostTitle}
-          onEditPostAuthorIdChange={setEditPostAuthorId}
-          onSavePostEdit={handleSavePostEdit}
-          onCancelPostEdit={handleCancelPostEdit}
-          onDeletePost={handleDeletePost}
-          onDeleteUser={handleDeleteUser}
-          onCommitPost={handleCommitPost}
-          onRollbackPost={handleRollbackPost}
-        />
-      </Panel>
-      <Row>
-        <ChangeLog title="User Changes" entries={userChanges} />
-        <ChangeLog title="Post Changes" entries={postChanges} />
-      </Row>
+      </LeftColumn>
+      <RightColumn>
+        <ChangeLog title="Changes" entries={changes} />
+      </RightColumn>
     </Container>
   );
 }
@@ -223,22 +223,35 @@ function AppInner() {
 export const App = observer(AppInner);
 
 const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-7);
-  padding: var(--space-7);
-  max-width: 960px;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  max-width: 1200px;
   margin: 0 auto;
   font-family: var(--font-sans);
+  align-items: start;
+`;
+
+const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+`;
+
+const RightColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 `;
 
 const Row = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-7);
+  gap: var(--space-3);
 `;
 
 const Title = styled.h2`
-  margin: 0 0 var(--space-6);
+  margin: 0 0 var(--space-3);
   font-size: var(--font-size-xl);
 `;
