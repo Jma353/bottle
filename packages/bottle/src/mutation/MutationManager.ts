@@ -176,6 +176,19 @@ export class MutationManager<T extends Entity> {
   }
 
   /**
+   * Returns entity ids that have an active mutation with draft or pending status.
+   */
+  getUncommittedIds(): readonly string[] {
+    const ids: string[] = [];
+    for (const [id, mutation] of this.activeMutations) {
+      if (mutation.status === 'draft' || mutation.status === 'pending') {
+        ids.push(id);
+      }
+    }
+    return Object.freeze(ids);
+  }
+
+  /**
    * Clear all in-memory mutation and snapshot state.
    */
   clear(): void {

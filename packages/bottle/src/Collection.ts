@@ -65,6 +65,7 @@ export class Collection<T extends Entity> {
 
     makeObservable(this, {
       all: computed,
+      uncommittedIds: computed,
       get: action.bound,
       create: action.bound,
       delete: action.bound,
@@ -136,6 +137,13 @@ export class Collection<T extends Entity> {
         }
       }
     }
+  }
+
+  /**
+   * Returns entity ids that currently have a draft or pending mutation.
+   */
+  get uncommittedIds(): readonly string[] {
+    return this.mutationManager.getUncommittedIds();
   }
 
   /**
