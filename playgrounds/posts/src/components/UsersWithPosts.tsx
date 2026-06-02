@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { store, type Post, type User } from '../store';
 
 import { AuthorSelect } from './AuthorSelect';
-import { Button, Empty, Input } from './ui';
+import { CheckIcon, DeleteIcon, EditIcon, Empty, IconButton, Input, XIcon } from './ui';
 
 type Props = {
   users: readonly User[];
@@ -123,8 +123,12 @@ function UsersWithPostsInner(props: Props) {
                   />
                 </EditRow>
                 <EditRow>
-                  <Button onClick={onSaveUserEdit}>Save</Button>
-                  <Button onClick={onCancelUserEdit}>Cancel</Button>
+                  <IconButton onClick={onSaveUserEdit} title="Save">
+                    <CheckIcon />
+                  </IconButton>
+                  <IconButton onClick={onCancelUserEdit} title="Cancel">
+                    <XIcon />
+                  </IconButton>
                 </EditRow>
               </>
             ) : (
@@ -133,8 +137,12 @@ function UsersWithPostsInner(props: Props) {
                   {user.name} (age {user.age})
                 </UserName>
                 <ButtonGroup>
-                  <Button onClick={() => onStartEditUser(user)}>Edit</Button>
-                  <Button onClick={() => onDeleteUser(user.id)}>Delete</Button>
+                  <IconButton onClick={() => onStartEditUser(user)} title="Edit">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton onClick={() => onDeleteUser(user.id)} title="Delete">
+                    <DeleteIcon />
+                  </IconButton>
                 </ButtonGroup>
               </UserHeader>
             )}
@@ -165,8 +173,12 @@ function UsersWithPostsInner(props: Props) {
                             </AuthorSelectWrapper>
                           </EditRow>
                           <EditRow>
-                            <Button onClick={onSavePostEdit}>Save</Button>
-                            <Button onClick={onCancelPostEdit}>Cancel</Button>
+                            <IconButton onClick={onSavePostEdit} title="Save">
+                              <CheckIcon />
+                            </IconButton>
+                            <IconButton onClick={onCancelPostEdit} title="Cancel">
+                              <XIcon />
+                            </IconButton>
                           </EditRow>
                         </>
                       ) : isDraft ? (
@@ -201,15 +213,15 @@ function UsersWithPostsInner(props: Props) {
                             ))}
                           </ChangedFields>
                           <EditRow>
-                            <Button onClick={() => onStartEditPost(post)}>
-                              Edit Draft
-                            </Button>
-                            <Button onClick={() => onCommitPost(post.id)}>
-                              Save Draft
-                            </Button>
-                            <Button onClick={() => onRollbackPost(post.id)}>
-                              Cancel
-                            </Button>
+                            <IconButton onClick={() => onStartEditPost(post)} title="Edit Draft">
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton onClick={() => onCommitPost(post.id)} title="Save Draft">
+                              <CheckIcon />
+                            </IconButton>
+                            <IconButton onClick={() => onRollbackPost(post.id)} title="Cancel">
+                              <XIcon />
+                            </IconButton>
                           </EditRow>
                         </>
                       ) : (
@@ -217,12 +229,12 @@ function UsersWithPostsInner(props: Props) {
                           <PostCardHeader>
                             <PostTitle>{post.title}</PostTitle>
                             <ButtonGroup>
-                              <Button onClick={() => onStartEditPost(post)}>
-                                Edit
-                              </Button>
-                              <Button onClick={() => onDeletePost(post.id)}>
-                                Delete
-                              </Button>
+                              <IconButton onClick={() => onStartEditPost(post)} title="Edit">
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton onClick={() => onDeletePost(post.id)} title="Delete">
+                                <DeleteIcon />
+                              </IconButton>
                             </ButtonGroup>
                           </PostCardHeader>
                           <PostMeta>
@@ -245,11 +257,13 @@ function UsersWithPostsInner(props: Props) {
 export const UsersWithPosts = observer(UsersWithPostsInner);
 
 const UserEntry = styled.div`
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--color-gray-100);
+  padding: var(--space-5);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--color-gray-50);
 
-  &:last-child {
-    border-bottom: none;
+  &:not(:last-child) {
+    margin-bottom: var(--space-5);
   }
 `;
 
@@ -281,7 +295,6 @@ const PostsGrid = styled.div`
   flex-direction: column;
   gap: var(--space-5);
   margin-top: var(--space-5);
-  padding-left: var(--space-3);
 `;
 
 const PostCard = styled.div`
