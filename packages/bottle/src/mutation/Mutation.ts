@@ -1,8 +1,6 @@
 import { observable, action, makeObservable } from 'mobx';
 
-import type { Entity, ItemChange } from '../types';
-
-import type { MutationStatus } from './types';
+import type { Entity, ItemChange, MutationStatus } from '../types';
 
 type ExecuteFunction<T extends Entity> = (
   change: ItemChange<T>,

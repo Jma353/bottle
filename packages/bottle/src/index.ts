@@ -5,8 +5,13 @@ export { LocalStorage } from './storage/LocalStorage';
 export { IndexedDBStorage } from './storage/IndexedDBStorage';
 export { neverReached } from './utils/neverReached';
 export type { EntitySnapshots } from './Collection';
-export type { Entity, ChangeType, ItemChange, ChangeHandler } from './types';
-export type { MutationStatus } from './mutation/types';
+export type {
+  Entity,
+  ChangeType,
+  ItemChange,
+  ChangeHandler,
+  MutationStatus,
+} from './types';
 export type {
   Storage,
   StoredSnapshot,

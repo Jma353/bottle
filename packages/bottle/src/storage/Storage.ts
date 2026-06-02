@@ -1,5 +1,9 @@
-import type { MutationStatus } from '../mutation/types';
-import type { DeepReadonly, Entity, ItemChange } from '../types';
+import type {
+  DeepReadonly,
+  Entity,
+  ItemChange,
+  MutationStatus,
+} from '../types';
 
 /**
  * Plain snapshot representation suitable for serialization by a storage backend.

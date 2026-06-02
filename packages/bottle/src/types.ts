@@ -34,6 +34,12 @@ export type ItemChange<T extends Entity> = {
 };
 
 /**
+ * Represents the lifecycle stages of a mutation operation.
+ * Tracks whether a change is still being edited, in flight, or finalized.
+ */
+export type MutationStatus = 'draft' | 'pending' | 'committed';
+
+/**
  * Callback signature for subscribers that want to react to entity changes.
  * Receives an immutable snapshot describing what changed in the store.
  */
