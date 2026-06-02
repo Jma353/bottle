@@ -629,10 +629,10 @@ describe('Collection', () => {
     }).toThrow("No active mutation for entity 'one'");
   });
 
-  it('ingests externally pushed entities without creating a mutation', () => {
+  it('puts externally pushed entities without creating a mutation', () => {
     const collection = new Collection<TestEntity>();
 
-    const result = collection.ingest({
+    const result = collection.put({
       entity: {
         id: 'one',
         name: 'External',
@@ -653,17 +653,17 @@ describe('Collection', () => {
     });
   });
 
-  it('ingests externally pushed updates to existing entities', () => {
+  it('puts externally pushed updates to existing entities', () => {
     const collection = new Collection<TestEntity>();
 
-    collection.ingest({
+    collection.put({
       entity: {
         id: 'one',
         name: 'Original',
         meta: { count: 1 },
       },
     });
-    collection.ingest({
+    collection.put({
       entity: {
         id: 'one',
         name: 'Updated',
@@ -678,7 +678,7 @@ describe('Collection', () => {
     });
   });
 
-  it('updates snapshot original when ingesting during an active mutation', () => {
+  it('updates snapshot original when putting during an active mutation', () => {
     const collection = new Collection<TestEntity>({
       create: noopSync,
     });
@@ -710,7 +710,7 @@ describe('Collection', () => {
     });
     expect(snap.isDraft).toBe(true);
 
-    collection.ingest({
+    collection.put({
       entity: {
         id: 'one',
         name: 'External',
@@ -728,7 +728,7 @@ describe('Collection', () => {
     expect(snap.isDraft).toBe(false);
   });
 
-  it('discards a pending insert mutation when the entity is ingested', async () => {
+  it('discards a pending insert mutation when the entity is put', async () => {
     const syncPromise = new Promise<void>(() => {});
     const collection = new Collection<TestEntity>({
       create: async () => {
@@ -753,7 +753,7 @@ describe('Collection', () => {
     });
     expect(snap.isDraft).toBe(false);
 
-    collection.ingest({
+    collection.put({
       entity: {
         id: 'one',
         name: 'External',
@@ -771,7 +771,7 @@ describe('Collection', () => {
     expect(snap.isDraft).toBe(false);
   });
 
-  it('updates original snapshot when ingesting during a draft update mutation', async () => {
+  it('updates original snapshot when putting during a draft update mutation', async () => {
     const collection = new Collection<TestEntity>({
       create: noopSync,
     });
@@ -806,7 +806,7 @@ describe('Collection', () => {
     });
     expect(snap.isDraft).toBe(true);
 
-    collection.ingest({
+    collection.put({
       entity: {
         id: 'one',
         name: 'External',
@@ -833,10 +833,10 @@ describe('Collection', () => {
     });
   });
 
-  it('removes externally deleted entities without creating a mutation', () => {
+  it('evicts externally deleted entities without creating a mutation', () => {
     const collection = new Collection<TestEntity>();
 
-    collection.ingest({
+    collection.put({
       entity: {
         id: 'one',
         name: 'External',
@@ -844,7 +844,7 @@ describe('Collection', () => {
       },
     });
 
-    const result = collection.remove({ id: 'one' });
+    const result = collection.evict({ id: 'one' });
 
     expect(result).toEqual({
       id: 'one',
@@ -858,12 +858,12 @@ describe('Collection', () => {
   it('returns undefined when removing a non-existent entity', () => {
     const collection = new Collection<TestEntity>();
 
-    const result = collection.remove({ id: 'one' });
+    const result = collection.evict({ id: 'one' });
 
     expect(result).toBeUndefined();
   });
 
-  it('removes an active mutation when the entity is removed', () => {
+  it('removes an active mutation when the entity is evicted', () => {
     const collection = new Collection<TestEntity>();
 
     collection.create({
@@ -878,7 +878,7 @@ describe('Collection', () => {
     let snap = collection.snapshot('one');
     expect(snap.isDraft).toBe(true);
 
-    collection.remove({ id: 'one' });
+    collection.evict({ id: 'one' });
 
     snap = collection.snapshot('one');
     expect(snap.current).toBeUndefined();
@@ -893,7 +893,7 @@ describe('Collection', () => {
       receivedChanges.push(change);
     });
 
-    collection.ingest({
+    collection.put({
       entity: {
         id: 'one',
         name: 'External',
@@ -902,7 +902,7 @@ describe('Collection', () => {
     });
     receivedChanges.length = 0;
 
-    collection.remove({ id: 'one' });
+    collection.evict({ id: 'one' });
 
     expect(receivedChanges).toEqual([]);
   });
@@ -1291,11 +1291,11 @@ describe('Collection', () => {
     expect(stored.entities).toEqual([]);
   });
 
-  it('syncs ingest to storage', async () => {
+  it('syncs put to storage', async () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.ingest({
+    collection.put({
       entity: { id: 'one', name: 'External', meta: { count: 1 } },
     });
 
@@ -1305,14 +1305,14 @@ describe('Collection', () => {
     ]);
   });
 
-  it('syncs remove to storage', async () => {
+  it('syncs evict to storage', async () => {
     const storage = new LocalStorage<TestEntity>();
     const collection = new Collection<TestEntity>({ storage });
 
-    collection.ingest({
+    collection.put({
       entity: { id: 'one', name: 'External', meta: { count: 1 } },
     });
-    collection.remove({ id: 'one' });
+    collection.evict({ id: 'one' });
 
     const stored = await storage.getAll();
     expect(stored.entities).toEqual([]);

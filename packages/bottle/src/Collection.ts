@@ -69,8 +69,8 @@ export class Collection<T extends Entity> {
       create: action.bound,
       delete: action.bound,
       update: action.bound,
-      ingest: action.bound,
-      remove: action.bound,
+      put: action.bound,
+      evict: action.bound,
       commit: action.bound,
       rollback: action.bound,
       load: action.bound,
@@ -126,7 +126,7 @@ export class Collection<T extends Entity> {
 
       // Reconcile the live item with the snapshot's current value. This
       // is necessary because external code may have overwritten the stored
-      // entity (e.g. via ingest while mutations were not yet restored).
+      // entity (e.g. via put while mutations were not yet restored).
       const mutation = this.mutationManager.getActiveMutation(snapshot.id);
       if (mutation && mutation.status === 'draft') {
         if (snapshot.current !== undefined) {
@@ -292,7 +292,7 @@ export class Collection<T extends Entity> {
   /**
    * Inserts or updates an entity from an external source without creating a mutation.
    */
-  ingest(args: { entity: T }): DeepReadonly<T> {
+  put(args: { entity: T }): DeepReadonly<T> {
     const { entity } = args;
     const frozen = deepFreeze<T>(entity);
 
@@ -328,7 +328,7 @@ export class Collection<T extends Entity> {
   /**
    * Removes an entity by id from an external source without creating a mutation.
    */
-  remove(args: { id: string }): DeepReadonly<T> | undefined {
+  evict(args: { id: string }): DeepReadonly<T> | undefined {
     const { id } = args;
     const existing = this.items.get(id);
     if (!existing) {

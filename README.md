@@ -84,15 +84,15 @@ stop();
 
 ### Hydrating from a server
 
-`ingest` inserts or updates an entity from an external source without creating a mutation or emitting change events. `remove` deletes by id without creating a mutation or emitting change events. Use these when syncing server state into the collection.
+`put` inserts or updates an entity from an external source without creating a mutation or emitting change events. `evict` deletes by id without creating a mutation or emitting change events. Use these when syncing server state into the collection.
 
 ```ts
 for (const post of serverPosts) {
-  posts.ingest({ entity: post });
+  posts.put({ entity: post });
 }
 
 for (const id of deletedPostIds) {
-  posts.remove({ id });
+  posts.evict({ id });
 }
 ```
 

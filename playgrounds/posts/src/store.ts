@@ -95,7 +95,7 @@ class Store {
     }
     const users: User[] = await res.json();
     for (const user of users) {
-      this.users.ingest({ entity: user });
+      this.users.put({ entity: user });
     }
   }
 
@@ -106,7 +106,7 @@ class Store {
     }
     const posts: Post[] = await res.json();
     for (const post of posts) {
-      this.posts.ingest({ entity: post });
+      this.posts.put({ entity: post });
     }
   }
 
