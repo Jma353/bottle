@@ -49,12 +49,6 @@ export class MutationManager<T extends Entity> {
   setActiveMutation(mutation: Mutation<T>): void {
     this.activeMutations.set(mutation.change.id, mutation);
     this.setPendingSnapshot(mutation);
-
-    this.storage?.setMutation({
-      id: mutation.id,
-      change: mutation.change,
-      status: mutation.status,
-    });
   }
 
   /**
