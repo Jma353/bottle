@@ -212,7 +212,10 @@ export class Collection<T extends Entity> {
     }
     const mutation = this.createMutation({ change, onCommit, onError });
     if (autoCommit) {
-      this.commitMutation(mutation).catch(() => {});
+      this.commitMutation(mutation).catch(() => {
+        // Avoid throwing intentionally so create doesn't throw and mutation
+        // is stored properly (as not committed)
+      });
     }
   }
 
@@ -248,7 +251,10 @@ export class Collection<T extends Entity> {
     }
     const mutation = this.createMutation({ change, onCommit, onError });
     if (autoCommit) {
-      this.commitMutation(mutation).catch(() => {});
+      this.commitMutation(mutation).catch(() => {
+        // Avoid throwing intentionally so delete doesn't throw and mutation
+        // is stored properly (as not committed)
+      });
     }
   }
 
