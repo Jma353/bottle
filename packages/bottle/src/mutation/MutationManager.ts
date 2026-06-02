@@ -185,7 +185,7 @@ export class MutationManager<T extends Entity> {
         ids.push(id);
       }
     }
-    return ids;
+    return Object.freeze(ids);
   }
 
   /**
