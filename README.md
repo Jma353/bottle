@@ -175,7 +175,7 @@ This matters because:
 - **Storage requires serializable data.** Drafts, snapshots, and offline persistence all depend on plain, cloneable objects. References break serialization to stable storage solutions like `localStorage`, `IndexedDB`, and `SQLite`.
 - **Single source of truth.** When `author` updates, every post referencing it by `id` sees the new value automatically via `get()`. With direct references you would need to update every post manually.
 
-## React
+## Use in React
 
 Because `Collection` is built on MobX, components re-render automatically when observed data changes. Wrap components with `observer` and read directly from the collection in render.
 
