@@ -538,6 +538,55 @@ describe('Collection', () => {
     expect(Object.isFrozen(filtered[0]?.meta)).toBe(true);
   });
 
+  it('find returns the first matching entity or undefined', () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.put({
+      entity: { id: 'one', name: 'A', meta: { count: 1 } },
+    });
+    collection.put({
+      entity: { id: 'two', name: 'B', meta: { count: 2 } },
+    });
+    collection.put({
+      entity: { id: 'three', name: 'C', meta: { count: 2 } },
+    });
+
+    const found = collection.find(entity => entity.meta.count === 2);
+    expect(found).toEqual({
+      id: 'two',
+      name: 'B',
+      meta: { count: 2 },
+    });
+
+    const missing = collection.find(entity => entity.meta.count === 99);
+    expect(missing).toBeUndefined();
+  });
+
+  it('filter returns all matching entities or an empty array', () => {
+    const collection = new Collection<TestEntity>();
+
+    collection.put({
+      entity: { id: 'one', name: 'A', meta: { count: 1 } },
+    });
+    collection.put({
+      entity: { id: 'two', name: 'B', meta: { count: 2 } },
+    });
+    collection.put({
+      entity: { id: 'three', name: 'C', meta: { count: 2 } },
+    });
+
+    const matches = collection.filter(entity => entity.meta.count === 2);
+    expect(matches).toEqual([
+      { id: 'two', name: 'B', meta: { count: 2 } },
+      { id: 'three', name: 'C', meta: { count: 2 } },
+    ]);
+    expect(Object.isFrozen(matches)).toBe(true);
+
+    const empty = collection.filter(entity => entity.meta.count === 99);
+    expect(empty).toEqual([]);
+    expect(Object.isFrozen(empty)).toBe(true);
+  });
+
   it('diffs folded optimistic changes against ground truth', () => {
     const collection = new Collection<TestEntity>();
 
@@ -886,6 +935,85 @@ describe('Collection', () => {
     expect(collection.get('one')).toBeUndefined();
   });
 
+  it('updates original snapshot when putting during a pending update', async () => {
+    const collection = new Collection<TestEntity>({
+      create: noopSync,
+    });
+
+    collection.create({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'one' });
+
+    collection.create({
+      entity: { id: 'one', name: 'Pending', meta: { count: 2 } },
+      autoCommit: false,
+    });
+
+    let snap = collection.snapshot('one');
+    expect(snap.original).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Pending',
+      meta: { count: 2 },
+    });
+    expect(snap.isDraft).toBe(true);
+
+    collection.put({
+      entity: { id: 'one', name: 'External', meta: { count: 3 } },
+    });
+
+    snap = collection.snapshot('one');
+    expect(snap.original).toEqual({
+      id: 'one',
+      name: 'External',
+      meta: { count: 3 },
+    });
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Pending',
+      meta: { count: 2 },
+    });
+    expect(snap.isDraft).toBe(true);
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Pending',
+      meta: { count: 2 },
+    });
+  });
+
+  it('removes the pending mutation when evicting during a draft update', async () => {
+    const collection = new Collection<TestEntity>({
+      create: noopSync,
+    });
+
+    collection.create({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'one' });
+
+    collection.create({
+      entity: { id: 'one', name: 'Pending', meta: { count: 2 } },
+      autoCommit: false,
+    });
+
+    let snap = collection.snapshot('one');
+    expect(snap.isDraft).toBe(true);
+
+    collection.evict({ id: 'one' });
+
+    snap = collection.snapshot('one');
+    expect(snap.current).toBeUndefined();
+    expect(snap.isDraft).toBe(false);
+    expect(collection.get('one')).toBeUndefined();
+  });
+
   it('does not emit changes when removing an entity', () => {
     const collection = new Collection<TestEntity>();
     const receivedChanges: ItemChange<TestEntity>[] = [];
@@ -980,6 +1108,57 @@ describe('Collection', () => {
     await new Promise(resolve => setTimeout(resolve, 10));
 
     expect(receivedError?.message).toBe('sync failed');
+  });
+
+  it('creates a fresh mutation after a failed commit', async () => {
+    let shouldFail = true;
+    const collection = new Collection<TestEntity>({
+      create: async () => {
+        if (shouldFail) {
+          throw new Error('save failed');
+        }
+      },
+    });
+
+    collection.create({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+
+    let thrown: Error | undefined;
+    try {
+      await collection.commit({ id: 'one' });
+    } catch (err) {
+      thrown = err instanceof Error ? err : new Error(String(err));
+    }
+
+    expect(thrown?.message).toBe('save failed');
+    expect(() => {
+      collection.commit({ id: 'one' });
+    }).toThrow("No active mutation for entity 'one'");
+
+    collection.create({
+      entity: { id: 'one', name: 'Retried', meta: { count: 2 } },
+      autoCommit: false,
+    });
+
+    const snap = collection.snapshot('one');
+    expect(snap.isDraft).toBe(true);
+    expect(snap.current).toEqual({
+      id: 'one',
+      name: 'Retried',
+      meta: { count: 2 },
+    });
+
+    shouldFail = false;
+    await collection.commit({ id: 'one' });
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Retried',
+      meta: { count: 2 },
+    });
+    expect(collection.snapshot('one').isDraft).toBe(false);
   });
 
   it('clears snapshots when an update mutation settles on commit', async () => {
