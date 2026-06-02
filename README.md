@@ -6,18 +6,18 @@
 
 Lightweight reactive collections for normalized client data with mutations and optional offline storage. Built on MobX.
 
+## Install
+
+```sh
+pnpm add bottle
+```
+
 ## Philosophy
 
 Bottle puts `Collection` at the center of everything. There is no opinionated server-sync layer — `put` and `evict` give you simple hooks to hydrate from any data source. Offline storage is pluggable via the `Storage` interface. Mutations are first-class and on by default: every write is optimistic, tracks pending state, and exposes a simple `commit` / `rollback` interface on `Collection`. Mutations can be auto-committed or drafted, giving clients flexibility over how data is changed and synced. Any draft / pending changes are available via a small `snapshot` API on `Collection`.
 
 ```
 Client Code → Collection<T> → Mutation Manager / Mutation Queue / Storage (pluggable)
-```
-
-## Install
-
-```sh
-pnpm add bottle
 ```
 
 ## Collection
