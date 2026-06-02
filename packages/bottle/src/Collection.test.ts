@@ -1110,6 +1110,48 @@ describe('Collection', () => {
     expect(receivedError?.message).toBe('sync failed');
   });
 
+  it('allows retrying after an auto-commit failure', async () => {
+    let shouldFail = true;
+    const collection = new Collection<TestEntity>({
+      create: async () => {
+        if (shouldFail) {
+          throw new Error('sync failed');
+        }
+      },
+    });
+    let receivedError: Error | undefined;
+
+    collection.create({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: true,
+      onError: (error: Error) => {
+        receivedError = error;
+      },
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(receivedError?.message).toBe('sync failed');
+    expect(() => {
+      collection.commit({ id: 'one' });
+    }).toThrow("No active mutation for entity 'one'");
+
+    shouldFail = false;
+    collection.create({
+      entity: { id: 'one', name: 'Retried', meta: { count: 2 } },
+      autoCommit: true,
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(collection.get('one')).toEqual({
+      id: 'one',
+      name: 'Retried',
+      meta: { count: 2 },
+    });
+    expect(collection.snapshot('one').isDraft).toBe(false);
+  });
+
   it('creates a fresh mutation after a failed commit', async () => {
     let shouldFail = true;
     const collection = new Collection<TestEntity>({
