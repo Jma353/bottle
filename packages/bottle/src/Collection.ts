@@ -528,7 +528,7 @@ export class Collection<T extends Entity> {
       return current === undefined;
     }
 
-    return current === change.entity;
+    return isEqual(current, change.entity);
   }
 
   protected emit(change: ItemChange<T>): void {

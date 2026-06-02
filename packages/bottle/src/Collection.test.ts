@@ -1450,4 +1450,75 @@ describe('Collection', () => {
       meta: { count: 2 },
     });
   });
+
+  it('rolls back a draft author change to the original user', async () => {
+    type PostEntity = {
+      id: string;
+      title: string;
+      authorId: string;
+    };
+
+    const collection = new Collection<PostEntity>();
+
+    collection.create({
+      entity: {
+        id: 'p1',
+        title: 'Hello',
+        authorId: 'u1',
+      },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'p1' });
+
+    collection.update({
+      id: 'p1',
+      patch: { authorId: 'u2' },
+      autoCommit: false,
+    });
+
+    expect(collection.get('p1')?.authorId).toBe('u2');
+
+    collection.rollback({ id: 'p1' });
+
+    expect(collection.get('p1')?.authorId).toBe('u1');
+  });
+
+  it('rolls back a draft author change after loading from storage', async () => {
+    type PostEntity = {
+      id: string;
+      title: string;
+      authorId: string;
+    };
+
+    const storage = new LocalStorage<PostEntity>();
+    const collection = new Collection<PostEntity>({ storage });
+
+    collection.create({
+      entity: {
+        id: 'p1',
+        title: 'Hello',
+        authorId: 'u1',
+      },
+      autoCommit: false,
+    });
+    await collection.commit({ id: 'p1' });
+
+    collection.update({
+      id: 'p1',
+      patch: { authorId: 'u2' },
+      autoCommit: false,
+    });
+
+    expect(collection.get('p1')?.authorId).toBe('u2');
+
+    // Simulate page reload by creating a new collection and loading from storage
+    const reloadedCollection = new Collection<PostEntity>({ storage });
+    await reloadedCollection.load();
+
+    expect(reloadedCollection.get('p1')?.authorId).toBe('u2');
+
+    reloadedCollection.rollback({ id: 'p1' });
+
+    expect(reloadedCollection.get('p1')?.authorId).toBe('u1');
+  });
 });
