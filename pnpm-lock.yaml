@@ -107,6 +107,40 @@ importers:
         specifier: 6.0.11
         version: 6.0.11(@types/node@22.0.0)(tsx@4.22.3)
 
+  playgrounds/todo:
+    dependencies:
+      bottle:
+        specifier: workspace:*
+        version: link:../../packages/bottle
+      mobx:
+        specifier: 6.15.4
+        version: 6.15.4
+      mobx-react-lite:
+        specifier: 4.1.1
+        version: 4.1.1(mobx@6.15.4)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      react:
+        specifier: 19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: 19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@types/react':
+        specifier: 19.0.0
+        version: 19.0.0
+      '@types/react-dom':
+        specifier: 19.0.0
+        version: 19.0.0
+      '@vitejs/plugin-react':
+        specifier: 4.3.4
+        version: 4.3.4(vite@6.0.11(@types/node@22.0.0)(tsx@4.22.3))
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vite:
+        specifier: 6.0.11
+        version: 6.0.11(@types/node@22.0.0)(tsx@4.22.3)
+
 packages:
 
   '@babel/code-frame@7.29.7':

@@ -1,12 +1,12 @@
 {
   "name": "playground-posts",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc && vite build",
     "dev": "vite",
     "dev:all": "concurrently \"pnpm dev\" \"pnpm run server\"",
-    "build": "tsc && vite build",
     "preview": "vite preview",
     "server": "tsx server.ts"
   },

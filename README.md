@@ -174,3 +174,59 @@ This matters because:
 - **Mutations must be trackable.** If `post.author` were a live reference, mutating it directly would bypass the collection — no optimistic patch, no rollback, no sync.
 - **Storage requires serializable data.** Drafts, snapshots, and offline persistence all depend on plain, cloneable objects. References break serialization to stable storage solutions like `localStorage`, `IndexedDB`, and `SQLite`.
 - **Single source of truth.** When `author` updates, every post referencing it by `id` sees the new value automatically via `get()`. With direct references you would need to update every post manually.
+
+## React
+
+Because `Collection` is built on MobX, components re-render automatically when observed data changes. Wrap components with `observer` and read directly from the collection in render.
+
+```tsx
+import { Collection } from 'bottle';
+import { observer } from 'mobx-react-lite';
+import { useState } from 'react';
+
+type Todo = { id: string; text: string; done: boolean };
+
+const todos = new Collection<Todo>();
+
+const TodoList = observer(() => {
+  const [text, setText] = useState('');
+  const all = todos.all;
+
+  const handleAdd = () => {
+    if (!text.trim()) {
+      return;
+    }
+    todos.create({ entity: { id: crypto.randomUUID(), text, done: false } });
+    setText('');
+  };
+
+  return (
+    <div>
+      <input
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder="New todo"
+      />
+      <button onClick={handleAdd}>Add</button>
+      <ul>
+        {all.map(todo => (
+          <li key={todo.id}>
+            <span
+              style={{ textDecoration: todo.done ? 'line-through' : 'none' }}
+            >
+              {todo.text}
+            </span>
+            <button
+              onClick={() => {
+                todos.update({ id: todo.id, patch: { done: !todo.done } });
+              }}
+            >
+              Toggle
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+});
+```
