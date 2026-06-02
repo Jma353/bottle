@@ -14,7 +14,7 @@ pnpm add bottle
 
 ## Philosophy
 
-Bottle puts `Collection` at the center of everything. There is no opinionated server-sync layer — `put` and `evict` give you simple hooks to hydrate from any data source. Offline storage is pluggable via the `Storage` interface. Mutations are first-class and on by default: every write is optimistic, tracks pending state, and exposes a simple `commit` / `rollback` interface on `Collection`. Mutations can be auto-committed or drafted, giving clients flexibility over how data is changed and synced. Any draft / pending changes are available via a small `snapshot` API on `Collection`.
+Bottle puts `Collection` at the center of everything. There is no opinionated server-sync layer — `put` and `evict` give you simple hooks to hydrate from any data source. Offline storage is pluggable via the `Storage` interface. Mutations are first-class and on by default: every write is optimistic, tracks pending state, and exposes a simple `commit` / `rollback` / `flush` interface on `Collection`. Mutations can be auto-committed or drafted, giving clients flexibility over how data is changed and synced. Any draft / pending changes are available via a small `snapshot` API on `Collection`.
 
 ```
 Client Code → Collection<T> → Mutation Manager / Mutation Queue / Storage (pluggable)
@@ -132,6 +132,12 @@ Use `uncommittedIds` to get the ids of all entities that currently have a draft 
 
 ```ts
 const ids = posts.uncommittedIds;
+```
+
+`flush` commits every entity that still has an uncommitted draft:
+
+```ts
+await posts.flush();
 ```
 
 Once a draft is committed, the mutation runs through the collection's sync callback. If a new change is made while a mutation is already in-flight, it becomes a separate mutation that queues behind the pending one.

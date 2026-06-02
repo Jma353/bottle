@@ -631,22 +631,25 @@ describe('Collection', () => {
     });
   });
 
-  it('throws when committing or rolling back without an active mutation', () => {
+  it('throws when committing or rolling back without an active mutation', async () => {
     const collection = new Collection<TestEntity>();
 
-    expect(() => {
-      collection.commit({ id: 'one' });
-    }).toThrow("No active mutation for entity 'one'");
+    await expect(collection.commit({ id: 'one' })).rejects.toThrow(
+      "No active mutation for entity 'one'",
+    );
 
     expect(() => {
       collection.rollback({ id: 'one' });
     }).toThrow("No active mutation for entity 'one'");
   });
 
-  it('commits and removes mutation on failure', async () => {
+  it('keeps mutation as draft after manual commit failure', async () => {
+    let shouldFail = true;
     const collection = new Collection<TestEntity>({
       create: async () => {
-        throw new Error('save failed');
+        if (shouldFail) {
+          throw new Error('save failed');
+        }
       },
     });
 
@@ -673,9 +676,11 @@ describe('Collection', () => {
       meta: { count: 1 },
     });
 
-    expect(() => {
-      collection.commit({ id: 'one' });
-    }).toThrow("No active mutation for entity 'one'");
+    expect(collection.snapshot('one').isDraft).toBe(true);
+
+    shouldFail = false;
+    await collection.commit({ id: 'one' });
+    expect(collection.snapshot('one').isDraft).toBe(false);
   });
 
   it('puts externally pushed entities without creating a mutation', () => {
@@ -1057,10 +1062,13 @@ describe('Collection', () => {
     });
   });
 
-  it('stores auto-commit errors and removes mutation on failure', async () => {
+  it('keeps mutation as draft on auto-commit failure', async () => {
+    let shouldFail = true;
     const collection = new Collection<TestEntity>({
       create: async () => {
-        throw new Error('sync failed');
+        if (shouldFail) {
+          throw new Error('sync failed');
+        }
       },
     });
     collection.create({
@@ -1080,9 +1088,12 @@ describe('Collection', () => {
       meta: { count: 1 },
     });
 
-    expect(() => {
-      collection.commit({ id: 'one' });
-    }).toThrow("No active mutation for entity 'one'");
+    expect(collection.snapshot('one').isDraft).toBe(true);
+
+    shouldFail = false;
+    await collection.commit({ id: 'one' });
+
+    expect(collection.snapshot('one').isDraft).toBe(false);
   });
 
   it('calls onError when auto-commit fails', async () => {
@@ -1110,7 +1121,7 @@ describe('Collection', () => {
     expect(receivedError?.message).toBe('sync failed');
   });
 
-  it('allows retrying after an auto-commit failure', async () => {
+  it('allows retrying a failed auto-commit with commit', async () => {
     let shouldFail = true;
     const collection = new Collection<TestEntity>({
       create: async () => {
@@ -1132,27 +1143,20 @@ describe('Collection', () => {
     await new Promise(resolve => setTimeout(resolve, 10));
 
     expect(receivedError?.message).toBe('sync failed');
-    expect(() => {
-      collection.commit({ id: 'one' });
-    }).toThrow("No active mutation for entity 'one'");
+    expect(collection.snapshot('one').isDraft).toBe(true);
 
     shouldFail = false;
-    collection.create({
-      entity: { id: 'one', name: 'Retried', meta: { count: 2 } },
-      autoCommit: true,
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await collection.commit({ id: 'one' });
 
     expect(collection.get('one')).toEqual({
       id: 'one',
-      name: 'Retried',
-      meta: { count: 2 },
+      name: 'Original',
+      meta: { count: 1 },
     });
     expect(collection.snapshot('one').isDraft).toBe(false);
   });
 
-  it('creates a fresh mutation after a failed commit', async () => {
+  it('allows retrying a failed manual commit', async () => {
     let shouldFail = true;
     const collection = new Collection<TestEntity>({
       create: async () => {
@@ -1175,30 +1179,15 @@ describe('Collection', () => {
     }
 
     expect(thrown?.message).toBe('save failed');
-    expect(() => {
-      collection.commit({ id: 'one' });
-    }).toThrow("No active mutation for entity 'one'");
-
-    collection.create({
-      entity: { id: 'one', name: 'Retried', meta: { count: 2 } },
-      autoCommit: false,
-    });
-
-    const snap = collection.snapshot('one');
-    expect(snap.isDraft).toBe(true);
-    expect(snap.current).toEqual({
-      id: 'one',
-      name: 'Retried',
-      meta: { count: 2 },
-    });
+    expect(collection.snapshot('one').isDraft).toBe(true);
 
     shouldFail = false;
     await collection.commit({ id: 'one' });
 
     expect(collection.get('one')).toEqual({
       id: 'one',
-      name: 'Retried',
-      meta: { count: 2 },
+      name: 'Original',
+      meta: { count: 1 },
     });
     expect(collection.snapshot('one').isDraft).toBe(false);
   });
@@ -1585,9 +1574,14 @@ describe('Collection', () => {
     expect(stored.snapshots).toEqual([]);
   });
 
-  it('removes mutation and snapshot from storage on commit failure', async () => {
+  it('persists mutation and snapshot as draft in storage on commit failure', async () => {
     const storage = new LocalStorage<TestEntity>();
-    const collection = new Collection<TestEntity>({ storage });
+    const collection = new Collection<TestEntity>({
+      storage,
+      create: async () => {
+        throw new Error('save failed');
+      },
+    });
 
     collection.create({
       entity: { id: 'one', name: 'Original', meta: { count: 1 } },
@@ -1601,8 +1595,14 @@ describe('Collection', () => {
     }
 
     const stored = await storage.getAll();
-    expect(stored.mutations).toEqual([]);
-    expect(stored.snapshots).toEqual([]);
+    expect(stored.mutations.length).toBe(1);
+    expect(stored.mutations[0]!.status).toBe('draft');
+    expect(stored.snapshots.length).toBe(1);
+    expect(stored.snapshots[0]!.current).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
   });
 
   it('updates stored mutation on fold', async () => {
@@ -1741,5 +1741,88 @@ describe('Collection', () => {
     reloadedCollection.rollback({ id: 'p1' });
 
     expect(reloadedCollection.get('p1')?.authorId).toBe('u1');
+  });
+
+  it('flushes all draft mutations', async () => {
+    let failA = true;
+    let failB = true;
+    const collection = new Collection<TestEntity>({
+      create: async change => {
+        if (change.id === 'a' && failA) {
+          throw new Error('a failed');
+        }
+        if (change.id === 'b' && failB) {
+          throw new Error('b failed');
+        }
+      },
+    });
+
+    collection.create({
+      entity: { id: 'a', name: 'A', meta: { count: 1 } },
+      autoCommit: true,
+    });
+    collection.create({
+      entity: { id: 'b', name: 'B', meta: { count: 2 } },
+      autoCommit: true,
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(collection.snapshot('a').isDraft).toBe(true);
+    expect(collection.snapshot('b').isDraft).toBe(true);
+
+    failA = false;
+    failB = false;
+    await collection.flush();
+
+    expect(collection.snapshot('a').isDraft).toBe(false);
+    expect(collection.snapshot('b').isDraft).toBe(false);
+  });
+
+  it('restores failed mutations from storage and allows flush', async () => {
+    const storage = new LocalStorage<TestEntity>();
+    let shouldFail = true;
+    const collection = new Collection<TestEntity>({
+      storage,
+      create: async () => {
+        if (shouldFail) {
+          throw new Error('sync failed');
+        }
+      },
+    });
+
+    collection.create({
+      entity: { id: 'one', name: 'Original', meta: { count: 1 } },
+      autoCommit: false,
+    });
+
+    try {
+      await collection.commit({ id: 'one' });
+    } catch {
+      // expected
+    }
+
+    // Simulate page reload
+    const reloaded = new Collection<TestEntity>({
+      storage,
+      create: async () => {
+        if (shouldFail) {
+          throw new Error('sync failed');
+        }
+      },
+    });
+    await reloaded.load();
+
+    expect(reloaded.snapshot('one').isDraft).toBe(true);
+
+    shouldFail = false;
+    await reloaded.flush();
+
+    expect(reloaded.get('one')).toEqual({
+      id: 'one',
+      name: 'Original',
+      meta: { count: 1 },
+    });
+    expect(reloaded.snapshot('one').isDraft).toBe(false);
   });
 });

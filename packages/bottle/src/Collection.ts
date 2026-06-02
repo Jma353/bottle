@@ -74,6 +74,7 @@ export class Collection<T extends Entity> {
       evict: action.bound,
       commit: action.bound,
       rollback: action.bound,
+      flush: action.bound,
       load: action.bound,
     });
   }
@@ -211,8 +212,7 @@ export class Collection<T extends Entity> {
     }
     const mutation = this.createMutation({ change, onCommit, onError });
     if (autoCommit) {
-      const executor = this.resolveExecutor(mutation.change);
-      mutation.commit(executor).catch(() => {});
+      this.commitMutation(mutation).catch(() => {});
     }
   }
 
@@ -248,8 +248,7 @@ export class Collection<T extends Entity> {
     }
     const mutation = this.createMutation({ change, onCommit, onError });
     if (autoCommit) {
-      const executor = this.resolveExecutor(mutation.change);
-      mutation.commit(executor).catch(() => {});
+      this.commitMutation(mutation).catch(() => {});
     }
   }
 
@@ -275,14 +274,26 @@ export class Collection<T extends Entity> {
   /**
    * Commits the active mutation for the given entity id.
    */
-  commit(args: { id: string }): Promise<void> {
+  async commit(args: { id: string }): Promise<void> {
     const { id } = args;
     const mutation = this.mutationManager.getActiveMutation(id);
     if (!mutation) {
       throw new Error(`No active mutation for entity '${id}'`);
     }
-    const executor = this.resolveExecutor(mutation.change);
-    return mutation.commit(executor);
+    return this.commitMutation(mutation);
+  }
+
+  /**
+   * Commits all draft mutations that have an available sync callback.
+   */
+  async flush(): Promise<void> {
+    const ids = this.mutationManager.getUncommittedIds();
+    for (const id of ids) {
+      const mutation = this.mutationManager.getActiveMutation(id);
+      if (mutation?.status === 'draft') {
+        await this.commitMutation(mutation);
+      }
+    }
   }
 
   /**
@@ -410,6 +421,16 @@ export class Collection<T extends Entity> {
     this.storage?.deleteEntity(id);
 
     return change;
+  }
+
+  protected async commitMutation(mutation: Mutation<T>): Promise<void> {
+    const executor = this.resolveExecutor(mutation.change);
+    try {
+      await mutation.commit(executor);
+    } catch (err) {
+      this.mutationManager.setPendingSnapshot(mutation);
+      throw err;
+    }
   }
 
   protected resolveExecutor(

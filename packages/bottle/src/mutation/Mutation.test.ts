@@ -8,7 +8,7 @@ type TestEntity = {
 };
 
 describe('Mutation', () => {
-  it('calls onError and disposes the mutation on failure', async () => {
+  it('calls onError and keeps the mutation as draft on failure', async () => {
     let settled = false;
     let errorReceived: Error | undefined;
     const mutation = new Mutation<TestEntity>({
@@ -38,7 +38,7 @@ describe('Mutation', () => {
     expect(thrown?.message).toBe('save failed');
     expect(mutation.status).toBe('draft');
     expect(errorReceived?.message).toBe('save failed');
-    expect(settled).toBe(true);
+    expect(settled).toBe(false);
   });
 
   it('rolls back changes before commit and rejects later commits', async () => {

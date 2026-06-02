@@ -171,7 +171,6 @@ export class Mutation<T extends Entity> {
       this.status = 'draft';
       const error = err instanceof Error ? err : new Error(String(err));
       this.onError?.(error);
-      this.onSettled();
       throw error;
     }
   }
