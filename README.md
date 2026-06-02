@@ -142,6 +142,21 @@ await posts.flush();
 
 Once a draft is committed, the mutation runs through the collection's sync callback. If a new change is made while a mutation is already in-flight, it becomes a separate mutation that queues behind the pending one.
 
+When a sync callback throws, the mutation reverts to **draft** so it can be retried later. `snapshot(id).isDraft` stays `true` and calling `commit({ id })` again will attempt to sync once more. Attach `onError` to react to failures without catching the promise yourself:
+
+```ts
+posts.create({
+  entity: { id: 'post-3', title: 'Save me later' },
+  autoCommit: true,
+  onError: (error) => {
+    console.error('Sync failed:', error.message);
+  },
+});
+
+// Later: retry the failed draft
+await posts.commit({ id: 'post-3' });
+```
+
 ### Offline storage
 
 Pass a `Storage` backend to the constructor to persist entities, snapshots, and mutations across page reloads. Call `load` once before using the collection to hydrate from storage.
