@@ -4,7 +4,15 @@
   <img src="assets/bottle.png" width="200" />
 </p>
 
-Lightweight reactive store for normalized client data with mutations and optional offline storage.
+Lightweight reactive collections for normalized client data with mutations and optional offline storage. Built on MobX.
+
+## Philosophy
+
+Bottle puts `Collection` at the center of everything. There is no opinionated server-sync layer — `put` and `evict` give you simple hooks to hydrate from any data source. Offline storage is pluggable via the `Storage` interface. Mutations are first-class and on by default: every write is optimistic, tracks pending state, and exposes a simple `commit` / `rollback` interface on `Collection`. Mutations can be auto-committed or drafted, giving clients flexibility over how data is changed and synced. Any draft / pending changes are available via a small `snapshot` API on `Collection`.
+
+```
+Client Code → Collection<T> → Mutation Manager / Mutation Queue / Storage (pluggable)
+```
 
 ## Install
 
@@ -18,7 +26,7 @@ pnpm add bottle
 
 ### Writing data
 
-`create` inserts or updates one entity. `delete` removes an entity by id. Both apply optimistically and can sync to a server automatically when the collection is configured with `create`, `update`, and `delete` callbacks.
+`create` inserts or updates one entity. `update` applies a partial optimistic patch. `delete` removes an entity by id. All apply optimistically and can sync to a server automatically when the collection is configured with `create`, `update`, and `delete` callbacks.
 
 ```ts
 import { Collection } from 'bottle';
@@ -48,16 +56,12 @@ posts.create({
   entity: { id: 'post-1', title: 'Hello', published: false },
 });
 
-posts.delete({ id: 'post-1' });
-```
-
-`update` applies a partial optimistic patch:
-
-```ts
 posts.update({
   id: 'post-1',
   patch: { published: true },
 });
+
+posts.delete({ id: 'post-1' });
 ```
 
 ### Reading data
@@ -98,7 +102,7 @@ for (const id of deletedPostIds) {
 
 ### Drafts and pending mutations
 
-By default, `create`, `update`, and `delete` auto-commit. Pass `autoCommit: false` to queue the change instead. Each accepts optional `onCommit` and `onError` callbacks.
+By default, `create`, `update`, and `delete` auto-commit. Pass `autoCommit: false` to queue the change as a **draft** instead. Drafts are local, uncommitted mutations that fold into one active mutation per entity. You can keep editing, inspect the diff, then commit or roll back when ready.
 
 ```ts
 posts.create({
@@ -106,10 +110,13 @@ posts.create({
   autoCommit: false,
 });
 
+// keep editing — folds into the same draft
+posts.update({ id: 'post-2', patch: { title: 'Better Draft' } });
+
 await posts.commit({ id: 'post-2' });
 ```
 
-Use `snapshot` to inspect the original and current state of an entity while a mutation is pending:
+Use `snapshot` to inspect the original and current state of an entity while a draft or pending mutation is active:
 
 ```ts
 const { original, current } = posts.snapshot('post-2');
@@ -121,7 +128,7 @@ Roll back a draft or pending mutation:
 posts.rollback({ id: 'post-2' });
 ```
 
-Draft changes for the same entity fold into one active mutation. Later changes made while a previous mutation is already pending create a separate mutation.
+Once a draft is committed, the mutation runs through the collection's sync callback. If a new change is made while a mutation is already in-flight, it becomes a separate mutation that queues behind the pending one.
 
 ### Offline storage
 
@@ -148,3 +155,22 @@ const posts = new Collection<Post>({
 ```
 
 When storage is attached, draft and pending mutations are restored automatically on `load`, so users can continue editing where they left off. You can also build a custom backend by implementing the `Storage` interface.
+
+## Data modeling
+
+Entities should be self-contained. They can reference other entities by `id`, but should never hold direct object references.
+
+```ts
+// Good — normalized
+posts.create({ entity: { id: '1', title: 'Hello', authorId: 'user-1' } });
+
+// Bad — nested object reference
+posts.create({ entity: { id: '1', title: 'Hello', author: userObject } });
+```
+
+This matters because:
+
+- **Returned data is deeply frozen.** `get`, `all`, and `filter` return immutable copies. Object references cannot be frozen in place without breaking the original graph.
+- **Mutations must be trackable.** If `post.author` were a live reference, mutating it directly would bypass the collection — no optimistic patch, no rollback, no sync.
+- **Storage requires serializable data.** Drafts, snapshots, and offline persistence all depend on plain, cloneable objects. References break serialization to stable storage solutions like `localStorage`, `IndexedDB`, and `SQLite`.
+- **Single source of truth.** When `author` updates, every post referencing it by `id` sees the new value automatically via `get()`. With direct references you would need to update every post manually.
