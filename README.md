@@ -128,13 +128,13 @@ Roll back a draft or pending mutation:
 posts.rollback({ id: 'post-2' });
 ```
 
-Use `mutatingIds` to get the ids of all entities that currently have a draft or pending mutation:
+Use `uncommittedIds` to get the ids of all entities that currently have a draft or pending mutation:
 
 ```ts
-const ids = posts.mutatingIds; // readonly string[]
+const ids = posts.uncommittedIds; // readonly string[]
 ```
 
-`mutatingIds` is a MobX `computed`, so any observer that reads it will re-run automatically when mutations are added, committed, or rolled back.
+`uncommittedIds` is a MobX `computed`, so any observer that reads it will re-run automatically when mutations are added, committed, or rolled back.
 
 Once a draft is committed, the mutation runs through the collection's sync callback. If a new change is made while a mutation is already in-flight, it becomes a separate mutation that queues behind the pending one.
 
